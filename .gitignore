@@ -1,0 +1,28 @@
+# Ortam / gizli
+.env
+*.local.yml
+
+# Java / Maven
+target/
+*.class
+*.log
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.classpath
+.project
+.settings/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
