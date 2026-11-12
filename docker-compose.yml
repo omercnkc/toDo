@@ -1,0 +1,27 @@
+name: todo
+
+# Faz 0: yalnızca MySQL. Servisler ilgili fazlarda eklenecek (bkz. docs/09-devops-docker.md).
+services:
+  mysql:
+    image: mysql:8.0
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?.env içinde MYSQL_ROOT_PASSWORD gerekli}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?.env içinde AUTH_DB_PASSWORD gerekli}
+      PROJECT_DB_PASSWORD: ${PROJECT_DB_PASSWORD:?.env içinde PROJECT_DB_PASSWORD gerekli}
+      TASK_DB_PASSWORD: ${TASK_DB_PASSWORD:?.env içinde TASK_DB_PASSWORD gerekli}
+      TZ: Europe/Istanbul
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"   # yerel geliştirmede servisler IDE'den bağlanır
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  mysql_data:
