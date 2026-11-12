@@ -1,0 +1,12 @@
+server:
+  port: ${SERVER_PORT:8082}
+
+spring:
+  application:
+    name: project-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -1,0 +1,12 @@
+server:
+  port: ${SERVER_PORT:8084}
+
+spring:
+  application:
+    name: dashboard-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -1,0 +1,12 @@
+server:
+  port: ${SERVER_PORT:8083}
+
+spring:
+  application:
+    name: task-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
