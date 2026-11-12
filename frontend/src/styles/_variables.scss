@@ -1,0 +1,9 @@
+// Bootstrap değişken override'ları (Bootstrap import'undan ÖNCE yüklenir).
+$primary: #4f46e5;
+$border-radius: 0.5rem;
+$font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+// Görev durum renkleri (Kanban / rozetler)
+$status-todo: #6c757d;
+$status-in-progress: #0d6efd;
+$status-done: #198754;

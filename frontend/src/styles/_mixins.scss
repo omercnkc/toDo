@@ -1,0 +1,12 @@
+// Bootstrap breakpoint mixin'lerini sarmalayan kısa yardımcılar.
+@mixin mobile {
+  @include media-breakpoint-down(md) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @include media-breakpoint-up(lg) {
+    @content;
+  }
+}
