@@ -16,7 +16,8 @@ com.kafein.todo.<service>
 ```
 
 ## common-lib
-JWT parse/validate yardımcıları, `JwtAuthenticationFilter`, `CurrentUser` (id, role) çözücü, ortak `ApiError` modeli, ortak sayfalama DTO (`PageResponse<T>`), Feign `AuthHeaderInterceptor`.
+`JwtService` (HS256 üretim/doğrulama; yalnızca HS256 kabul, `exp` zorunlu), `JwtAuthenticationFilter` (servlet; bean değil, güvenlik zincirine `addFilterBefore` ile eklenir), `AuthenticatedUser` (id, email, role — controller'da `@AuthenticationPrincipal` ile alınır; ayrı bir `CurrentUser` çözücüsü yok), `Role` (USER=0, ADMIN=1; hem JWT claim'i hem DB kodu), `CodedEnum` + `CodedEnumConverter` (TINYINT kodlu enum'lar için ortak JPA dönüştürücü), ortak `ApiError` modeli, ortak sayfalama DTO (`PageResponse<T>`), Feign `AuthHeaderInterceptor`.
+Servlet, Spring Security ve JPA bağımlılıkları `optional`: common-lib'i kullanan gateway (WebFlux) bunları classpath'ine almaz, yalnızca jjwt gelir.
 
 ## discovery-server
 Eureka Server. Başka sorumluluğu yok.

@@ -1,10 +1,16 @@
 # Active Context
 
 ## Şu anki odak
-Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Sıradaki: Faz 2 – adım 2-A (common-lib JWT yardımcıları + auth-service Flyway/entity).
+Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2 devam ediyor; sıradaki: 2-B (register/login + SecurityFilterChain + hata yönetimi).
 
 Çalışma şekli: fazlar adımlara bölünür, küçük alt görevler 2–3'erli tek adımda; her adım sonunda değişiklik anlatımı + test sonucu + kullanıcı onayıyla commit.
 Faz 2 adımları: 2-A (JWT util + auth DB), 2-B (register/login + SecurityFilterChain + hata yönetimi), 2-C (refresh/logout + gateway gerçek JWT doğrulama + Origin kontrolü), 2-D (kullanıcı uçları + ADMIN seed + test tamamlama), 2-E (FE AuthService/APP_INITIALIZER/interceptor'lar), 2-F (routing/guard + login/register), 2-G (layout, profil, ADMIN liste, uçtan uca kontrol).
+
+## Faz 2 ilerleme
+- 2-A tamam (2026-11-13): common-lib `JwtService`/`JwtAuthenticationFilter`/`AuthenticatedUser`/`Role`/`CodedEnumConverter`; auth-service JPA+Flyway (`V1__create_users_and_refresh_tokens.sql`), `User`, `RefreshToken`, repository'ler, Eureka client. auth-service'te henüz Spring Security ve endpoint yok (2-B).
+- auth-service `spring.config.import` ile repo kökündeki `.env`'i okur (optional; kökten, backend/'den veya modül dizininden çalıştırılabilir). Docker'da env değişkenleri kullanılır.
+- Testler Testcontainers MySQL 8 ile (Docker gerekli). Parent POM'da `testcontainers.version=1.21.4` (1.19.8 Docker 29'a bağlanamıyor).
+- MySQL CHECK ihlali (3819) Spring JDBC'de `UncategorizedSQLException` olarak geliyor (DataIntegrityViolation değil).
 
 ## Faz 1'de kurulanlar
 - Gateway: route'lar `lb://` + `StripPrefix=1` (servis controller'ları `/api` önekisiz), `/api/invitations/**` → project-service, discovery.locator kapalı, `/internal/**` route yok.

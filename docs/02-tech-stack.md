@@ -8,14 +8,14 @@
 | Spring Web | | REST API |
 | Spring Data JPA / Hibernate | | ORM |
 | Spring Security | | Kimlik doğrulama / yetkilendirme |
-| JWT (jjwt 0.12.x) | | Access + refresh token |
+| JWT (jjwt 0.12.6) | | Access + refresh token |
 | Spring Cloud | 2023.0.x (Netflix Eureka, Gateway, OpenFeign) | Discovery, gateway, servisler arası çağrı |
 | Resilience4j | | Feign için timeout / circuit breaker |
 | MySQL | 8.x | Veritabanı |
 | Flyway | | Şema migration |
 | MapStruct + Lombok | | DTO eşleme, boilerplate azaltma |
 | springdoc-openapi | | Swagger UI (her serviste) |
-| JUnit 5, Mockito, Testcontainers | | Test |
+| JUnit 5, Mockito, Testcontainers 1.21.4 | | Test (Testcontainers sürümü Boot'un getirdiği 1.19.8'den yükseltildi: Docker 29 uyumu) |
 | Maven | multi-module | Build |
 | Docker / Docker Compose | | Paketleme ve çalıştırma |
 
