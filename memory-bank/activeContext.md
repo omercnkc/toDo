@@ -1,7 +1,13 @@
 # Active Context
 
 ## Şu anki odak
-Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2 backend'i tamam (2-A..2-D). Sıradaki: 2-E (frontend core: AuthService token bellekte, APP_INITIALIZER sessiz refresh, AuthInterceptor tek seferlik refresh kilidi, ErrorInterceptor, ToastService).
+Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2 backend'i tamam (2-A..2-D), 2-E (frontend core) tamam. Sıradaki: 2-F (routing iskeleti + lazy modüller, AuthGuard/RoleGuard/GuestGuard, login & register sayfaları, fieldErrors → form alanları).
+
+## Frontend (2-E) notları
+- `core/`: `AuthService` (BehaviorSubject state, token yalnız bellekte, `refresh()` tek seferlik, `initialize()` APP_INITIALIZER için Promise, `sessionExpired()`, `updateCurrentUser()`), `AuthInterceptor`, `ErrorInterceptor`, `ToastService`, modeller (`ApiError`+`extractApiError`, `User`/`UserDetail`, `AuthResponse`, `Page<T>`), `CoreModule` (HttpClientModule + interceptors + APP_INITIALIZER; tekrar import'a karşı koruma). `shared/`: `SharedModule`, `ToastContainerComponent` (app.component'te).
+- Test: `npx ng test --watch=false --browsers=ChromeHeadless` (Chrome kurulu; Node 14.18.1 bash PATH'te aktif). Build: `npx ng build`. 33 frontend testi.
+- Interceptor tekrar denemesi `next.handle` ile gider, interceptor'dan yeniden geçmez → retry'ın 401'i switchMap içinde yakalanır (HttpContext işareti işe yaramıyordu).
+- Bash'te arka planda `ng serve` başlatınca kapatmak için PowerShell'de port 4200'ün sahibini `Stop-Process` ile durdur (geniş `taskkill node` kullanma).
 
 Çalışma şekli: fazlar adımlara bölünür, küçük alt görevler 2–3'erli tek adımda; her adım sonunda değişiklik anlatımı + test sonucu + kullanıcı onayıyla commit.
 Faz 2 adımları: 2-A (JWT util + auth DB), 2-B (register/login + SecurityFilterChain + hata yönetimi), 2-C (refresh/logout + gateway gerçek JWT doğrulama + Origin kontrolü), 2-D (kullanıcı uçları + ADMIN seed + test tamamlama), 2-E (FE AuthService/APP_INITIALIZER/interceptor'lar), 2-F (routing/guard + login/register), 2-G (layout, profil, ADMIN liste, uçtan uca kontrol).

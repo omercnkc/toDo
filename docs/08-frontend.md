@@ -39,6 +39,11 @@ frontend/src/app/
 - Arama kutusu: `valueChanges.pipe(debounceTime(300), distinctUntilChanged(), switchMap(...))`.
 - Filtreler `combineLatest` ile birleşir; URL query param'larıyla senkron (sayfa yenilense de filtre kalır).
 - Token yenileme: interceptor'da tek seferlik refresh (`shareReplay`/subject ile kilit), bekleyen istekler yeni token ile tekrar denenir. Refresh isteği gövdesizdir; cookie tarayıcı tarafından eklenir (aynı origin). Refresh 401 dönerse oturum temizlenir, login'e gidilir.
+  - Uygulama (2-E): tek seferlik kilit `AuthService.refresh()` içinde (`shareReplay(1)` + `finalize`), hem `APP_INITIALIZER` hem `AuthInterceptor` aynı metodu kullanır. Tekrar deneme **bir kez** yapılır; yeni token'la da 401 gelirse (örn. hesap pasifleştirildi) oturum biter (`sessionExpired()` → `/login?returnUrl=...`).
+  - Bearer yalnızca relative `/api/...` isteklerine eklenir (başka adreslere token gitmez); `/api/auth/**` uçlarında eklenmez ve 401'de yenileme denenmez (refresh'in 401'i döngü yaratmasın).
+  - Interceptor sırası `AuthInterceptor` → `ErrorInterceptor` (CoreModule). `ErrorInterceptor` yalnızca ağ hatası (0), 5xx ve 403 (kimlik uçları hariç) için toast gösterir; 400/404/409 formlara/sayfalara, 401 AuthInterceptor'a bırakılır. Bir istek için kapatmak: `HttpContext().set(SKIP_ERROR_TOAST, true)`.
+  - Hata gövdesi okumak: `extractApiError(err)` → `{error, message, fieldErrors}`.
+- Paket bütçesi: başlangıç paketi uyarı eşiği 600 kB (Bootstrap CSS+JS ~266 kB; özellik sayfaları lazy-loaded olduğu için büyümesi beklenmez), hata 1 MB. `legend+* -> Cannot read property 'type'` build notu Bootstrap'in bir kuralının Angular 13 CSS optimize edicisinde atlanmasıdır, zararsız.
 - Çıkış: `POST /api/auth/logout` (cookie sunucuda silinir) + bellekteki token/kullanıcı temizlenir.
 - Abonelik sızıntısı yok: `async` pipe tercih edilir, aksi halde `takeUntil(destroy$)`.
 

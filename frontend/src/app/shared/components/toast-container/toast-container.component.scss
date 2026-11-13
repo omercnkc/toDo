@@ -1,0 +1,11 @@
+// Mobilde (Bootstrap "sm" altı) bildirimler ekran genişliğine yayılsın
+@media (max-width: 575.98px) {
+  .toast-container {
+    left: 0;
+    width: 100%;
+
+    .toast {
+      width: 100%;
+    }
+  }
+}
