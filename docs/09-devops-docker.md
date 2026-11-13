@@ -9,21 +9,13 @@
 | auth/project/task/dashboard | aynı | Dışarı port açılmaz (geliştirmede debug için açılabilir) |
 | frontend | multi-stage (Node 14 build → `nginx:alpine`) | `nginx.conf`: SPA fallback `try_files ... /index.html` + `location /api/ { proxy_pass http://api-gateway:8080; }` (aynı origin → httpOnly cookie sorunsuz) |
 
-## Backend Dockerfile (örnek, servis başına)
-```dockerfile
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /app
-COPY backend/pom.xml backend/pom.xml
-COPY backend/common-lib backend/common-lib
-COPY backend/auth-service backend/auth-service
-RUN mvn -f backend/pom.xml -pl auth-service -am -DskipTests package
-
-FROM eclipse-temurin:21-jre
-WORKDIR /app
-COPY --from=build /app/backend/auth-service/target/*.jar app.jar
-EXPOSE 8081
-ENTRYPOINT ["java","-jar","app.jar"]
-```
+## Backend Dockerfile (tüm servisler için tek dosya)
+`backend/Dockerfile` ortaktır; derlenecek servis `SERVICE` build argümanıyla seçilir (compose'da `x-backend-build` + `args.SERVICE`). Özet:
+- Build aşaması `maven:3.9-eclipse-temurin-21`: `backend/` tamamı kopyalanır (parent POM tüm modülleri listelediği için yalnızca ilgili modülleri kopyalamak reactor'ü bozar), `mvn -pl $SERVICE -am -DskipTests package`. `~/.m2` BuildKit cache mount'unda.
+- Runtime aşaması `eclipse-temurin:21-jre`, root olmayan `app` kullanıcısı, `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75`.
+- Healthcheck compose'da: `curl -fs http://localhost:<port>/actuator/health` (JRE imajında curl var).
+- Kök dizindeki `.dockerignore` `target/`, `node_modules`, `.env`, `.git`, `docs` vb. dışarıda bırakır.
+- Windows: `docker compose build` "failed to execute bake" verirse terminal dizini büyük sürücü harfiyle (`D:\`) açılmalı (buildx `d:` / `D:` yazımlarını farklı yol sayıyor).
 
 ## Frontend Dockerfile (örnek)
 ```dockerfile
@@ -54,13 +46,19 @@ services:
       interval: 10s
       retries: 10
   discovery-server:
-    build: { context: ., dockerfile: backend/discovery-server/Dockerfile }
+    build: { context: ., dockerfile: backend/Dockerfile, args: { SERVICE: discovery-server } }
+    environment: { EUREKA_HOSTNAME: discovery-server }
+    ports: ["127.0.0.1:8761:8761"]   # Eureka paneli, yalnızca yerel
   api-gateway:
-    build: { context: ., dockerfile: backend/api-gateway/Dockerfile }
+    build: { context: ., dockerfile: backend/Dockerfile, args: { SERVICE: api-gateway } }
+    environment:
+      EUREKA_URL: http://discovery-server:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: api-gateway
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:4200}
     ports: ["8080:8080"]
-    depends_on: [discovery-server]
+    depends_on: { discovery-server: { condition: service_healthy } }
   auth-service:
-    build: { context: ., dockerfile: backend/auth-service/Dockerfile }
+    build: { context: ., dockerfile: backend/Dockerfile, args: { SERVICE: auth-service } }
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/auth_db
       SPRING_DATASOURCE_USERNAME: auth_user

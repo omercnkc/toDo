@@ -1,6 +1,13 @@
 name: todo
 
-# Faz 0: yalnızca MySQL. Servisler ilgili fazlarda eklenecek (bkz. docs/09-devops-docker.md).
+# Servisler ilgili fazlarda eklenir (bkz. docs/09-devops-docker.md).
+# Faz 0: MySQL. Faz 1: discovery-server + api-gateway.
+
+# Backend servislerinin ortak build ayarı (SERVICE argümanı servis başına verilir)
+x-backend-build: &backend-build
+  context: .
+  dockerfile: backend/Dockerfile
+
 services:
   mysql:
     image: mysql:8.0
@@ -18,6 +25,45 @@ services:
       - ./docker/mysql/init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  discovery-server:
+    build:
+      <<: *backend-build
+      args:
+        SERVICE: discovery-server
+    environment:
+      EUREKA_HOSTNAME: discovery-server
+      TZ: Europe/Istanbul
+    ports:
+      - "127.0.0.1:8761:8761"   # Eureka paneli; yalnızca bu makineden erişilir (geliştirme)
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api-gateway:
+    build:
+      <<: *backend-build
+      args:
+        SERVICE: api-gateway
+    environment:
+      EUREKA_URL: http://discovery-server:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: api-gateway
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:4200}
+      TZ: Europe/Istanbul
+    ports:
+      - "8080:8080"   # dış dünyaya açılan tek backend portu
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/actuator/health"]
       interval: 10s
       timeout: 5s
       retries: 10

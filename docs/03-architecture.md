@@ -78,8 +78,10 @@ toDo/
 | Path | Hedef |
 |---|---|
 | `/api/auth/**`, `/api/users/**` | auth-service |
-| `/api/projects/**` | project-service |
+| `/api/projects/**`, `/api/invitations/**` | project-service |
 | `/api/tasks/**` | task-service |
 | `/api/dashboard/**` | dashboard-service |
 
-`/api/auth/login`, `/api/auth/register`, `/api/auth/refresh` herkese açık; diğerleri JWT gerektirir. Refresh token yalnızca `Path=/api/auth` httpOnly cookie'si ile taşınır; gateway `Cookie`/`Set-Cookie` header'larını olduğu gibi iletir.
+Tüm route'larda `StripPrefix=1` uygulanır (`/api/auth/login` → auth-service'e `/auth/login`); servis controller'ları `/api` öneki olmadan yazılır, Feign çağrılarıyla aynı yollar kullanılır. `/internal/**` route edilmez; gateway `..`, `%2e`, `%2f`, `%5c`, `;` içeren yolları 400 ile reddeder. İstemciden gelen `X-User-Id`/`X-User-Role` header'ları her zaman silinir.
+
+`/api/auth/login`, `/api/auth/register`, `/api/auth/refresh`, `/api/auth/logout` JWT gerektirmez (logout refresh cookie'si ile doğrulanır; access token süresi dolmuş olsa da çıkış yapılabilmeli); diğerleri JWT gerektirir. Açık yollar `gateway.security.open-paths` ayarındadır. Refresh token yalnızca `Path=/api/auth` httpOnly cookie'si ile taşınır; gateway `Cookie`/`Set-Cookie` header'larını olduğu gibi iletir.

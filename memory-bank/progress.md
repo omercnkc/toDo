@@ -6,7 +6,7 @@
 
 ## Yapılacaklar (docs/10-roadmap.md fazları)
 - [x] Faz 0 – İskelet (monorepo, Maven parent, common-lib, compose+MySQL, Angular projesi) — 2026-11-12 tamamlandı (mvnw package, ng build, testler, MySQL şema/kullanıcı izolasyonu doğrulandı)
-- [ ] Faz 1 – discovery-server + api-gateway
+- [x] Faz 1 – discovery-server + api-gateway — 2026-11-13 tamamlandı (3 adım: 1-A Eureka, 1-B route/CORS/filtre iskeleti, 1-C Docker; jar ve Docker'da Eureka kaydı + route/401/404/400/CORS doğrulandı)
 - [ ] Faz 2 – auth-service + frontend login/layout
 - [ ] Faz 3 – project-service + proje ekranları + davet akışı
 - [ ] Faz 4 – task-service + Kanban + outbox relay (proje kalıcı silme)
@@ -15,7 +15,9 @@
 - [ ] Faz 7 – Cila, testler, uçtan uca Docker
 
 ## Bilinen sorunlar
-Yok (kod henüz yok).
+- Gateway kapanırken Eureka'ya hemen `DOWN` bildiriyor ama cancel isteği sunucuya ulaşmıyor; kayıt lease süresiyle (~40 sn) düşüyor. DOWN örneklere istek gitmediği için pratik etkisi yok.
+- Servis örneği yokken gateway'in 503 yanıtı Spring varsayılan formatında (ApiError değil) — Faz 7.
+- Windows'ta `docker compose build` küçük sürücü harfli dizinden (`d:\`) çalıştırılınca buildx "failed to execute bake" veriyor; `D:\` ile çalıştır.
 
 ## Karar geçmişi
 - Gateway+Eureka+Feign (senkron), tek MySQL/3 şema, monorepo, ADMIN/USER + proje üyeleri.

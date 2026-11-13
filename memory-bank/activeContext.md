@@ -1,7 +1,17 @@
 # Active Context
 
 ## Şu anki odak
-Faz 0 (iskelet) tamamlandı ve GitHub'a (omercnkc/toDo, main) pushlandı (2026-11-12). Sıradaki: Faz 1 (discovery-server + api-gateway).
+Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Sıradaki: Faz 2 – adım 2-A (common-lib JWT yardımcıları + auth-service Flyway/entity).
+
+Çalışma şekli: fazlar adımlara bölünür, küçük alt görevler 2–3'erli tek adımda; her adım sonunda değişiklik anlatımı + test sonucu + kullanıcı onayıyla commit.
+Faz 2 adımları: 2-A (JWT util + auth DB), 2-B (register/login + SecurityFilterChain + hata yönetimi), 2-C (refresh/logout + gateway gerçek JWT doğrulama + Origin kontrolü), 2-D (kullanıcı uçları + ADMIN seed + test tamamlama), 2-E (FE AuthService/APP_INITIALIZER/interceptor'lar), 2-F (routing/guard + login/register), 2-G (layout, profil, ADMIN liste, uçtan uca kontrol).
+
+## Faz 1'de kurulanlar
+- Gateway: route'lar `lb://` + `StripPrefix=1` (servis controller'ları `/api` önekisiz), `/api/invitations/**` → project-service, discovery.locator kapalı, `/internal/**` route yok.
+- `AuthenticationFilter` (GlobalFilter, order -100): yol hilesi → 400, `X-User-*` silme, açık yollar `gateway.security.open-paths` (login/register/refresh/logout), Bearer yoksa 401. `TODO(2-C)`: imza doğrulama + `X-User-*` ekleme. Hatalar common-lib `ApiError` ile (`ErrorResponseWriter`).
+- Gateway common-lib'e bağımlı: common-lib'e servlet'e özgü kod (JwtAuthenticationFilter) eklenirken servlet/web bağımlılıkları `optional` olmalı, gateway (WebFlux) bozulmasın.
+- Docker: tek `backend/Dockerfile` (`SERVICE` arg), compose `x-backend-build` anchor; Eureka paneli `127.0.0.1:8761`, gateway `8080`; healthcheck curl ile `/actuator/health`. Env: `EUREKA_URL`, `EUREKA_HOSTNAME`, `EUREKA_INSTANCE_HOSTNAME`, `FRONTEND_ORIGIN`.
+- Windows'ta compose build'i `D:\` (büyük harf) dizinden çalıştır (PowerShell `Set-Location 'D:\kafein\toDo'`).
 
 ## Faz 0'da kurulanlar / ortam notları
 - Git repo `main`, remote `origin` = https://github.com/omercnkc/toDo. Commit mesajları Türkçe, konvansiyonel önek (feat/build/docs/chore) + açıklama gövdesi.

@@ -96,6 +96,16 @@ npm ci
 npm start                       # http://localhost:4200  (/api -> :8080 proxy)
 ```
 
+Altyapı servisleri Docker ile de çalıştırılabilir (Eureka paneli: http://localhost:8761):
+
+```bash
+docker compose up -d --build discovery-server api-gateway
+```
+
+> **Windows notu:** `docker compose build`, `failed to execute bake: exit status 1` hatası verirse terminalin
+> çalışma dizinini sürücü harfi büyük olacak şekilde açın (`cd D:\...`, `d:\...` değil). buildx bu iki yazımı
+> farklı klasör sayıp Dockerfile'ı izinli alanın dışında görüyor.
+
 Tüm sistemi Docker ile ayağa kaldırma (`docker compose up --build`) Faz 7'de tamamlanacak.
 
 ## Yapılandırma
@@ -109,6 +119,7 @@ Gizli bilgiler repoda tutulmaz. `.env.example`'ı `.env` olarak kopyalayıp dold
 | `JWT_SECRET` | HS256 imza anahtarı (en az 32 bayt) |
 | `COOKIE_SECURE` | Refresh cookie'nin `Secure` bayrağı (yerel http'de `false`) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | İlk açılışta oluşturulan ADMIN kullanıcısı |
+| `FRONTEND_ORIGIN` | Gateway CORS'unun izin verdiği tek origin (varsayılan `http://localhost:4200`) |
 
 ## Portlar
 
@@ -137,7 +148,7 @@ Tüm istekler gateway üzerinden `/api` ile başlar. Tam sözleşme: [docs/06-ap
 | Faz | İçerik | Durum |
 |---|---|---|
 | 0 | İskelet: monorepo, Maven parent, `common-lib`, MySQL compose, Angular projesi | ✅ |
-| 1 | discovery-server + api-gateway | ⏳ |
+| 1 | discovery-server + api-gateway | ✅ |
 | 2 | auth-service + login/layout | ⏳ |
 | 3 | project-service + davet akışı + proje ekranları | ⏳ |
 | 4 | task-service + Kanban + outbox relay | ⏳ |
@@ -151,4 +162,4 @@ Ayrıntılar ve bitiş kriterleri: [docs/10-roadmap.md](docs/10-roadmap.md)
 
 ## Durum ve Katkı
 
-Proje aktif geliştirme aşamasında; şu an **Faz 0 tamamlandı**. Mimari kararlar ve gerekçeleri [`docs/`](docs/00-README.md) klasöründe. Öneri ve hata bildirimleri için [Issues](https://github.com/omercnkc/toDo/issues) sekmesini kullanabilirsiniz.
+Proje aktif geliştirme aşamasında; şu an **Faz 1 tamamlandı**. Mimari kararlar ve gerekçeleri [`docs/`](docs/00-README.md) klasöründe. Öneri ve hata bildirimleri için [Issues](https://github.com/omercnkc/toDo/issues) sekmesini kullanabilirsiniz.

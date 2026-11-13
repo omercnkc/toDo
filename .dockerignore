@@ -1,0 +1,17 @@
+# Build context repo kökü; imajlara gereksiz/gizli dosya gitmesin
+.git
+.env
+.vscode
+.idea
+docs
+memory-bank
+**/*.log
+
+# Backend derleme çıktıları
+**/target
+
+# Frontend bağımlılık ve derleme çıktıları
+frontend/node_modules
+frontend/.angular
+frontend/dist
+frontend/coverage
