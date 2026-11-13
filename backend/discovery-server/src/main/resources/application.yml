@@ -6,9 +6,22 @@ spring:
     name: discovery-server
 
 eureka:
+  instance:
+    # Docker'da compose servis adı verilir (EUREKA_HOSTNAME=discovery-server)
+    hostname: ${EUREKA_HOSTNAME:localhost}
   client:
+    # Tek Eureka sunucusu: kendini kaydetmez, başka sunucudan kayıt çekmez
     register-with-eureka: false
     fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    # Geliştirmede kapanan servisler panelden hızlı düşsün diye self-preservation kapalı.
+    # Üretim benzeri ortamda EUREKA_SELF_PRESERVATION=true yapılabilir.
+    enable-self-preservation: ${EUREKA_SELF_PRESERVATION:false}
+    eviction-interval-timer-in-ms: 10000
+    # Tek sunucu olduğu için açılışta eş sunucudan kayıt beklemeye gerek yok
+    wait-time-in-ms-when-sync-empty: 0
 
 management:
   endpoints:

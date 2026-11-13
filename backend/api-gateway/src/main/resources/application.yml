@@ -5,6 +5,19 @@ spring:
   application:
     name: api-gateway
 
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    # Kayıt listesini sık çek: yeni açılan servis gateway'e çabuk yansısın
+    registry-fetch-interval-seconds: 10
+  instance:
+    # Yerelde localhost; Docker'da compose servis adı (EUREKA_INSTANCE_HOSTNAME=api-gateway).
+    # prefer-ip-address kullanılmıyor: Windows'ta Docker/WSL sanal ağ kartlarının IP'si seçilebiliyor.
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
 management:
   endpoints:
     web:
