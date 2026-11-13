@@ -2,6 +2,7 @@ package com.kafein.todo.common.web;
 
 import com.kafein.todo.common.error.ApiException;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -40,6 +42,16 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/cakisma")
         void cakisma() {
             throw ApiException.conflict("EMAIL_ALREADY_EXISTS", "Bu e-posta zaten kayıtlı");
+        }
+
+        @GetMapping("/sayfa")
+        void sayfa(@RequestParam @Min(value = 1, message = "en az 1 olmalı") int size) {
+        }
+
+        @GetMapping("/alanli")
+        void alanli() {
+            throw ApiException.conflict("EMAIL_ALREADY_EXISTS", "Bu e-posta zaten kayıtlı")
+                    .withField("email", "zaten kayıtlı");
         }
 
         @GetMapping("/yetkisiz")
@@ -76,6 +88,24 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.error").value("EMAIL_ALREADY_EXISTS"))
                 .andExpect(jsonPath("$.message").value("Bu e-posta zaten kayıtlı"))
                 .andExpect(jsonPath("$.fieldErrors").doesNotExist());
+    }
+
+    @Test
+    void parametreKisitiIhlali400Doner() throws Exception {
+        mvc.perform(get("/sayfa").param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("size"))
+                .andExpect(jsonPath("$.fieldErrors[0].message").value("en az 1 olmalı"));
+    }
+
+    @Test
+    void alanaBagliApiExceptionFieldErrorsIcerir() throws Exception {
+        mvc.perform(get("/alanli"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("EMAIL_ALREADY_EXISTS"))
+                .andExpect(jsonPath("$.fieldErrors[0].field").value("email"))
+                .andExpect(jsonPath("$.fieldErrors[0].message").value("zaten kayıtlı"));
     }
 
     @Test

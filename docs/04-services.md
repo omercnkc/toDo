@@ -28,7 +28,8 @@ Spring Cloud Gateway: route'lar, JWT doğrulama filtresi (global), doğrulanan k
 ## auth-service (`auth_db`)
 - Kayıt, giriş, refresh, çıkış (refresh token iptali). Refresh token gövdede değil `refresh_token` httpOnly cookie'sinde verilir/okunur (bkz. 07).
 - Kullanıcı yönetimi: liste/arama (ADMIN), detay, güncelleme, pasifleştirme, şifre değiştirme.
-- Başka servislerin kullandığı uçlar: `GET /users/{id}`, `POST /users/lookup` (id listesi → özet bilgi).
+- Başka servislerin kullandığı uçlar: `GET /internal/users/{id}`, `POST /internal/users/lookup` (id listesi → özet bilgi). `/internal/**` gateway'de route edilmez (bkz. 06).
+- İlk açılışta `ADMIN_EMAIL` / `ADMIN_PASSWORD` ile varsayılan ADMIN oluşturulur (kullanıcı varsa dokunulmaz; şifre politikaya uymazsa servis açılmaz).
 
 ## project-service (`project_db`)
 - Proje CRUD (silme: yumuşak → `ARCHIVED`; kalıcı silme yalnızca ADMIN/sahip).
@@ -60,7 +61,7 @@ Tutarlılık: silme commit'inden sonra task-service'in üyelik kontrolü (Feign 
 ## Feign Client Özeti
 | Client (sahibi) | Hedef uçlar |
 |---|---|
-| `AuthClient` (project, dashboard) | `GET /users/{id}`, `POST /users/lookup` |
+| `AuthClient` (project, dashboard) | `GET /internal/users/{id}`, `POST /internal/users/lookup` |
 | `ProjectClient` (task, dashboard) | `GET /projects/{id}/members/{userId}`, `GET /projects/accessible`, `GET /projects/{id}` |
 | `TaskClient` (project – yalnızca outbox relay) | `DELETE /internal/tasks/by-project/{id}` |
 | `TaskClient` (dashboard) | `GET /tasks/stats`, `GET /tasks/assigned/{userId}` |

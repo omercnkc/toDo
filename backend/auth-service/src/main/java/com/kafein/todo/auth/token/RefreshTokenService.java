@@ -98,6 +98,17 @@ public class RefreshTokenService {
                 .ifPresent(token -> token.revoke(RevokeReason.LOGOUT, clock.instant()));
     }
 
+    /**
+     * Kullanıcının tüm oturumlarını kapatır (şifre değişikliği, pasifleştirme). Elindeki access
+     * token'lar süreleri dolana kadar (en fazla 15 dk) geçerli kalır; yenileyemezler.
+     *
+     * @return iptal edilen token sayısı
+     */
+    @Transactional
+    public int revokeAll(Long userId) {
+        return repository.revokeAllActiveByUserId(userId, RevokeReason.FORCED, clock.instant());
+    }
+
     private String issue(User user, Instant now) {
         byte[] bytes = new byte[TOKEN_BYTES];
         RANDOM.nextBytes(bytes);

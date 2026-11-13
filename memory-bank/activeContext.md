@@ -1,7 +1,7 @@
 # Active Context
 
 ## Şu anki odak
-Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2 devam ediyor; sıradaki: 2-D (kullanıcı uçları: /users/me GET/PUT, şifre değiştirme, /users arama, ADMIN /users/{id} GET/PUT, /users/lookup; ADMIN seed; pasifleştirmede tüm refresh token'ları iptal; test tamamlama).
+Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2 backend'i tamam (2-A..2-D). Sıradaki: 2-E (frontend core: AuthService token bellekte, APP_INITIALIZER sessiz refresh, AuthInterceptor tek seferlik refresh kilidi, ErrorInterceptor, ToastService).
 
 Çalışma şekli: fazlar adımlara bölünür, küçük alt görevler 2–3'erli tek adımda; her adım sonunda değişiklik anlatımı + test sonucu + kullanıcı onayıyla commit.
 Faz 2 adımları: 2-A (JWT util + auth DB), 2-B (register/login + SecurityFilterChain + hata yönetimi), 2-C (refresh/logout + gateway gerçek JWT doğrulama + Origin kontrolü), 2-D (kullanıcı uçları + ADMIN seed + test tamamlama), 2-E (FE AuthService/APP_INITIALIZER/interceptor'lar), 2-F (routing/guard + login/register), 2-G (layout, profil, ADMIN liste, uçtan uca kontrol).
@@ -19,6 +19,8 @@ Faz 2 adımları: 2-A (JWT util + auth DB), 2-B (register/login + SecurityFilter
 - Gateway: gerçek JWT doğrulama (`JwtService.verifierOnly`, `gateway.security.jwt-secret=${JWT_SECRET}`), geçerliyse `X-User-Id/Role` yazılır; refresh/logout'ta Origin kontrolü (`cookie-auth-paths`, `allowed-origins=${FRONTEND_ORIGIN}`). Gateway de .env'i import ediyor; test profili `application-test.yml`.
 - Yabancı Origin'i gateway'de önce CORS katmanı reddediyor (gövdesiz 403); `FRONTEND_ORIGIN` public frontend adresiyle birebir aynı olmalı, yoksa aynı origin POST'ları da 403.
 - Compose'a auth-service eklendi (port yayınlanmaz); gateway'e `JWT_SECRET` env'i eklendi.
+- 2-D tamam (2026-11-13): `/users/me` GET/PUT, `/users/me/password` (tüm oturumlar FORCED iptal), `/users?q=` (USER: q≥3, aktifler, özet; ADMIN: hepsi, detay; `!` ile LIKE kaçışı), ADMIN `/users/{id}` GET/PUT (kendini değiştiremez; pasifleştirme → FORCED). **Servisler arası uçlar `/internal/users/{id}` ve `/internal/users/lookup`** (dokümandaki /users/{id}, /users/lookup yerine; gerekçe docs/06 notu). `AdminBootstrap` (ADMIN_EMAIL/PASSWORD; compose'a eklendi). V3: revoke_reason 3=FORCED. `ApiException.withField(...)` → fieldErrors. GlobalExceptionHandler `HandlerMethodValidationException` (Spring 6.1 @RequestParam kısıtları) ele alıyor.
+- Test profilinde ADMIN: admin@test.local / Admin.Sifre1. Backend toplam 157 test.
 
 ## Faz 1'de kurulanlar
 - Gateway: route'lar `lb://` + `StripPrefix=1` (servis controller'ları `/api` önekisiz), `/api/invitations/**` → project-service, discovery.locator kapalı, `/internal/**` route yok.

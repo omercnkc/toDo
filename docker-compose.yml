@@ -83,6 +83,9 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:?.env içinde AUTH_DB_PASSWORD gerekli}
       JWT_SECRET: ${JWT_SECRET:?.env içinde JWT_SECRET gerekli}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      # İlk açılışta bu e-postada kullanıcı yoksa ADMIN oluşturulur (boşsa atlanır)
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       EUREKA_URL: http://discovery-server:8761/eureka
       EUREKA_INSTANCE_HOSTNAME: auth-service
       TZ: Europe/Istanbul

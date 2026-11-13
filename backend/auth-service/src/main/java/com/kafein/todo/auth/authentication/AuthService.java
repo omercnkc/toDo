@@ -103,7 +103,8 @@ public class AuthService {
     }
 
     private static ApiException emailTaken() {
-        return ApiException.conflict("EMAIL_ALREADY_EXISTS", "Bu e-posta adresi zaten kayıtlı");
+        return ApiException.conflict("EMAIL_ALREADY_EXISTS", "Bu e-posta adresi zaten kayıtlı")
+                .withField("email", "bu e-posta adresi zaten kayıtlı");
     }
 
     /** Controller'a dönen sonuç: gövde + cookie'ye yazılacak ham refresh token. */

@@ -60,6 +60,22 @@ public class User {
         this.enabled = true;
     }
 
+    public void changeFullName(String fullName) {
+        this.fullName = Objects.requireNonNull(fullName, "fullName").trim();
+    }
+
+    public void changePasswordHash(String passwordHash) {
+        this.passwordHash = Objects.requireNonNull(passwordHash, "passwordHash");
+    }
+
+    public void changeRole(Role role) {
+        this.role = Objects.requireNonNull(role, "role");
+    }
+
+    public void changeEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
     /** E-postalar tek biçimde saklanır/aranır: baş-son boşluksuz, küçük harf. */
     public static String normalizeEmail(String email) {
         return Objects.requireNonNull(email, "email").trim().toLowerCase(Locale.ROOT);

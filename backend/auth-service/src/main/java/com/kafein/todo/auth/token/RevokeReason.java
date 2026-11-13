@@ -9,7 +9,9 @@ public enum RevokeReason implements CodedEnum {
     /** Kullanıcı çıkış yaptı. */
     LOGOUT(1),
     /** İptal edilmiş token tekrar kullanıldı; kullanıcının tüm token'ları iptal edildi. */
-    REUSE_DETECTED(2);
+    REUSE_DETECTED(2),
+    /** Güvenlik olayı (şifre değişikliği, hesabın pasifleştirilmesi): tüm oturumlar kapatıldı. */
+    FORCED(3);
 
     private final byte code;
 

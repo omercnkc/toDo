@@ -18,6 +18,7 @@ import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -37,7 +38,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApi(ApiException ex, HttpServletRequest request) {
-        return respond(ex.getStatus(), ex.getError(), ex.getMessage(), request);
+        ApiError body = ApiError.withFieldErrors(ex.getStatus().value(), ex.getError(), ex.getMessage(),
+                request.getRequestURI(), ex.getFieldErrors());
+        return ResponseEntity.status(ex.getStatus()).body(body);
     }
 
     /** {@code @Valid @RequestBody} doğrulama hataları: alan bazlı {@code fieldErrors}. */
@@ -55,6 +58,21 @@ public class GlobalExceptionHandler {
         List<ApiError.FieldError> fieldErrors = ex.getConstraintViolations().stream()
                 .map(violation -> new ApiError.FieldError(lastNode(violation.getPropertyPath().toString()),
                         violation.getMessage()))
+                .toList();
+        return validationError(fieldErrors, request);
+    }
+
+    /**
+     * Spring 6.1+ yerleşik metot doğrulaması: controller parametrelerindeki {@code @Min}, {@code @Max} vb.
+     * (Ele alınmasa genel işleyici 500 dönerdi.)
+     */
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ApiError> handleMethodValidation(HandlerMethodValidationException ex,
+                                                           HttpServletRequest request) {
+        List<ApiError.FieldError> fieldErrors = ex.getAllValidationResults().stream()
+                .flatMap(result -> result.getResolvableErrors().stream()
+                        .map(error -> new ApiError.FieldError(result.getMethodParameter().getParameterName(),
+                                error.getDefaultMessage())))
                 .toList();
         return validationError(fieldErrors, request);
     }

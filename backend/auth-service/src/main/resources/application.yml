@@ -47,6 +47,10 @@ auth:
   password:
     # docs/07: 10–12. Her +1 hash süresini ~2 katına çıkarır (12 ≈ 200–300 ms)
     bcrypt-strength: 12
+  admin:
+    # İlk açılışta bu e-postada kullanıcı yoksa ADMIN olarak oluşturulur (varsa dokunulmaz)
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
 
 eureka:
   client:

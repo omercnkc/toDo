@@ -7,6 +7,9 @@ auth:
   password:
     # Testleri hızlandırmak için en düşük maliyet (üretimde 12)
     bcrypt-strength: 4
+  admin:
+    email: admin@test.local
+    password: Admin.Sifre1
 
 eureka:
   client:

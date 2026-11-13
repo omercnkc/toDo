@@ -14,10 +14,16 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "auth")
 public record AuthProperties(@Valid @NotNull Jwt jwt,
                              @Valid @NotNull RefreshToken refreshToken,
-                             @Valid @NotNull Password password) {
+                             @Valid @NotNull Password password,
+                             @Valid @NotNull Admin admin) {
 
     /** @param secret HS256 anahtarı; uzunluk kontrolünü {@code JwtService} yapar */
     public record Jwt(String secret, @NotNull Duration accessTokenTtl) {
+
+        @Override
+        public String toString() {
+            return "Jwt[secret=***, accessTokenTtl=" + accessTokenTtl + "]";
+        }
     }
 
     /**
@@ -28,5 +34,21 @@ public record AuthProperties(@Valid @NotNull Jwt jwt,
     }
 
     public record Password(@Min(4) @Max(31) int bcryptStrength) {
+    }
+
+    /**
+     * İlk açılışta oluşturulan ADMIN ({@code ADMIN_EMAIL}, {@code ADMIN_PASSWORD}).
+     * İkisinden biri boşsa seed atlanır.
+     */
+    public record Admin(String email, String password) {
+
+        public boolean isConfigured() {
+            return email != null && !email.isBlank() && password != null && !password.isBlank();
+        }
+
+        @Override
+        public String toString() {
+            return "Admin[email=" + email + ", password=***]";
+        }
     }
 }

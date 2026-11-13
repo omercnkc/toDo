@@ -194,10 +194,9 @@ class AuthControllerIntegrationTest {
         String token = objectMapper.readTree(mvc.perform(login(email, PASSWORD)).andReturn()
                 .getResponse().getContentAsString()).get("accessToken").asText();
 
-        // /users/me henüz yok (adım 2-D): güvenlikten geçip 404 alması token'ın kabul edildiğini gösterir
         mvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("NOT_FOUND"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(email));
     }
 
     @Test

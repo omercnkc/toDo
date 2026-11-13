@@ -42,7 +42,7 @@ Sabit değerli alanlar (`role`, `status`, `member_role`, `priority`, davet `stat
 | expires_at | DATETIME(6) | NOT NULL |
 | revoked | BOOLEAN | NOT NULL, default false |
 | revoked_at | DATETIME(6) | NULL (V2) |
-| revoke_reason | TINYINT UNSIGNED | NULL (V2; 0=`ROTATED`, 1=`LOGOUT`, 2=`REUSE_DETECTED`) |
+| revoke_reason | TINYINT UNSIGNED | NULL (V2; 0=`ROTATED`, 1=`LOGOUT`, 2=`REUSE_DETECTED`; V3: 3=`FORCED` — şifre değişikliği / pasifleştirme) |
 | created_at | DATETIME(6) | NOT NULL |
 
 ## project_db

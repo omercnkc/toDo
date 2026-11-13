@@ -20,13 +20,20 @@ Tüm istekler gateway üzerinden: `http://localhost:8080/api/...`. Gövde JSON. 
 | POST | `/api/auth/login` | Herkese açık | `{email,password}` → `{accessToken,expiresIn,user}` + `Set-Cookie: refresh_token` |
 | POST | `/api/auth/refresh` | Herkese açık | Gövde yok; refresh token cookie'den okunur → `{accessToken,expiresIn,user}` + yeni cookie (rotasyon). Cookie yok/geçersiz → 401 |
 | POST | `/api/auth/logout` | Cookie sahibi | Refresh token iptali + cookie silinir (`Max-Age=0`) → 204 |
-| GET | `/api/users/me` | Giriş yapmış | Profil |
-| PUT | `/api/users/me` | Giriş yapmış | Ad güncelleme |
-| PUT | `/api/users/me/password` | Giriş yapmış | `{currentPassword,newPassword}` |
-| GET | `/api/users?q=&page=&size=` | Giriş yapmış* | Kullanıcı arama (üye davet etmek için). *USER yalnızca id/ad/e-posta görür; `q` en az 3 karakter, yalnızca `enabled` kullanıcılar döner |
-| GET | `/api/users/{id}` | ADMIN / dahili | Detay |
-| PUT | `/api/users/{id}` | ADMIN | Rol, enabled güncelleme |
-| POST | `/api/users/lookup` | Dahili | `{ids:[..]}` → özet liste |
+| GET | `/api/users/me` | Giriş yapmış | Profil `{id,email,fullName,role,enabled,createdAt,updatedAt}` |
+| PUT | `/api/users/me` | Giriş yapmış | `{fullName}` ad güncelleme → profil |
+| PUT | `/api/users/me/password` | Giriş yapmış | `{currentPassword,newPassword}` → `204`. **Tüm oturumlar kapanır** (bu cihaz dahil; istemci login'e yönlenir) |
+| GET | `/api/users?q=&page=&size=` | Giriş yapmış* | *USER: üye davet etmek için arama; `q` en az 3 karakter, yalnızca `enabled` kullanıcılar, yalnızca `{id,email,fullName}`. ADMIN: kullanıcı yönetimi listesi; `q` isteğe bağlı, pasifler dahil, detaylı. Ad veya e-postada geçen metin (büyük/küçük harf duyarsız; `% _` joker sayılmaz). Sıralama ad, id. `size` 1–100 (varsayılan 20) |
+| GET | `/api/users/{id}` | ADMIN | Detay |
+| PUT | `/api/users/{id}` | ADMIN | `{role?, enabled?}` (gönderilmeyen alan değişmez). ADMIN kendini değiştiremez (409). Pasifleştirilen kullanıcının tüm oturumları kapanır |
+
+**Servisler arası (dahili) uçlar** — `/internal/**` gateway'de route edilmez, dışarıdan erişilemez. Çağıran servis kullanıcının token'ını iletir; herhangi bir geçerli token yeterli:
+| Metot | Yol (servis içi) | Açıklama |
+|---|---|---|
+| GET | `/internal/users/{id}` | `{id,email,fullName,enabled}`; yoksa 404 `USER_NOT_FOUND` |
+| POST | `/internal/users/lookup` | `{ids:[..]}` (1–200) → özet liste; bulunamayan id'ler sonuçta yer almaz |
+
+Not: Önceki taslakta `GET /users/{id}` ve `POST /users/lookup` "ADMIN / dahili" idi. Dahili çağrılar kullanıcının (çoğunlukla USER) token'ıyla geldiği için bu uçlar USER'a açılmak zorunda kalırdı ve id taramasıyla tüm kullanıcılar listelenebilirdi; bu yüzden ayrıldılar.
 
 Giriş yanıtı:
 ```json
@@ -46,7 +53,15 @@ auth hata kodları (`error` alanı):
 | 401 | `INVALID_CREDENTIALS` | E-posta veya şifre hatalı (ikisi ayırt edilmez) |
 | 401 | `UNAUTHORIZED` | Korumalı uçta token yok/geçersiz (`WWW-Authenticate: Bearer`) |
 | 403 | `ACCOUNT_DISABLED` | Şifre doğru ama hesap pasif |
-| 409 | `EMAIL_ALREADY_EXISTS` | E-posta kayıtlı (büyük/küçük harf duyarsız) |
+| 409 | `EMAIL_ALREADY_EXISTS` | E-posta kayıtlı (büyük/küçük harf duyarsız); `fieldErrors[email]` |
+| 401 | `INVALID_REFRESH_TOKEN` | Refresh cookie yok/geçersiz/iptal/süresi dolmuş (cookie silinir) |
+| 400 | `INVALID_CURRENT_PASSWORD` | Şifre değiştirmede mevcut şifre yanlış; `fieldErrors[currentPassword]` |
+| 400 | `SAME_PASSWORD` | Yeni şifre mevcutla aynı; `fieldErrors[newPassword]` |
+| 403 | `FORBIDDEN` | USER, ADMIN ucunu çağırdı |
+| 404 | `USER_NOT_FOUND` | Kullanıcı yok |
+| 409 | `SELF_MODIFICATION_NOT_ALLOWED` | ADMIN kendi rolünü/durumunu değiştirmeye çalıştı |
+
+İş kuralı hataları bir form alanına aitse `fieldErrors` da dolu gelir (frontend mesajı alanın altında gösterir).
 
 ## project-service
 | Metot | Yol | Yetki | Açıklama |
