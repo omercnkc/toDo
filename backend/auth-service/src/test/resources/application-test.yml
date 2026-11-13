@@ -1,0 +1,13 @@
+# @ActiveProfiles("test") ile yüklenir. Değerler .env'den bağımsızdır (CI'da .env yok).
+auth:
+  jwt:
+    secret: test-secret-test-secret-test-secret-123
+  refresh-token:
+    cookie-secure: true
+  password:
+    # Testleri hızlandırmak için en düşük maliyet (üretimde 12)
+    bcrypt-strength: 4
+
+eureka:
+  client:
+    enabled: false

@@ -1,7 +1,7 @@
 # Active Context
 
 ## Şu anki odak
-Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2 devam ediyor; sıradaki: 2-B (register/login + SecurityFilterChain + hata yönetimi).
+Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2 devam ediyor; sıradaki: 2-C (refresh rotasyonu/tekrar kullanım tespiti + logout, gateway'de gerçek JWT doğrulama + X-User-* ekleme + refresh/logout Origin kontrolü).
 
 Çalışma şekli: fazlar adımlara bölünür, küçük alt görevler 2–3'erli tek adımda; her adım sonunda değişiklik anlatımı + test sonucu + kullanıcı onayıyla commit.
 Faz 2 adımları: 2-A (JWT util + auth DB), 2-B (register/login + SecurityFilterChain + hata yönetimi), 2-C (refresh/logout + gateway gerçek JWT doğrulama + Origin kontrolü), 2-D (kullanıcı uçları + ADMIN seed + test tamamlama), 2-E (FE AuthService/APP_INITIALIZER/interceptor'lar), 2-F (routing/guard + login/register), 2-G (layout, profil, ADMIN liste, uçtan uca kontrol).
@@ -11,6 +11,10 @@ Faz 2 adımları: 2-A (JWT util + auth DB), 2-B (register/login + SecurityFilter
 - auth-service `spring.config.import` ile repo kökündeki `.env`'i okur (optional; kökten, backend/'den veya modül dizininden çalıştırılabilir). Docker'da env değişkenleri kullanılır.
 - Testler Testcontainers MySQL 8 ile (Docker gerekli). Parent POM'da `testcontainers.version=1.21.4` (1.19.8 Docker 29'a bağlanamıyor).
 - MySQL CHECK ihlali (3819) Spring JDBC'de `UncategorizedSQLException` olarak geliyor (DataIntegrityViolation değil).
+- 2-B tamam (2026-11-13): common-lib `ApiException`, `GlobalExceptionHandler`, `ApiErrorAuthenticationEntryPoint`/`AccessDeniedHandler`, `CommonWebAutoConfiguration` (AutoConfiguration.imports; yalnızca SERVLET + Spring Security varsa yüklenir). auth-service paket yapısı: `authentication` (controller/service/dto/validation), `user`, `token`, `config`. `POST /auth/register` (201), `POST /auth/login` (access token gövde + refresh cookie). `SecurityConfig`: stateless, csrf kapalı, açık: POST /auth/{register,login,refresh,logout}, actuator health/info. `UserDetailsServiceAutoConfiguration` exclude.
+- Test profili: `src/test/resources/application-test.yml` + `@ActiveProfiles("test")` (sabit JWT secret, bcrypt 4, eureka kapalı) — .env'e bağımlı olmasın.
+- Windows'ta curl ile Türkçe JSON gönderirken gövdeyi UTF-8 dosyadan (`--data-binary @dosya`) ver; komut satırı argümanı yanlış kodlanıp 400 alıyor.
+- Bilinen küçük eksik: servis ApiError.path'i StripPrefix sonrası yolu gösterir (`/auth/register`, `/api/...` değil).
 
 ## Faz 1'de kurulanlar
 - Gateway: route'lar `lb://` + `StripPrefix=1` (servis controller'ları `/api` önekisiz), `/api/invitations/**` → project-service, discovery.locator kapalı, `/internal/**` route yok.

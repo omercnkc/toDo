@@ -27,7 +27,10 @@ sequenceDiagram
 - **Frontend**: access token yalnızca bellekte (BehaviorSubject); `localStorage`/`sessionStorage`'a hiçbir token yazılmaz. Sayfa yenilenince `APP_INITIALIZER` sessizce `POST /api/auth/refresh` çağırır; 401 ise login'e yönlendirir.
 - **CSRF**: cookie yalnızca `/api/auth/refresh` ve `/api/auth/logout`'a gider; `SameSite=Strict` çapraz site isteklerde gönderilmesini engeller. Ek savunma: bu iki uçta gateway `Origin` header'ını izinli origin ile karşılaştırır. Diğer uçlar Bearer header kullandığı için CSRF'ten etkilenmez.
 - **Aynı origin**: frontend API'ye relative `/api` ile gider (yerelde `ng serve` proxy, Docker'da nginx reverse proxy). Böylece CORS'a ve `withCredentials`'a gerek kalmaz; CORS yapılandırması yalnızca farklı origin'li kurulumlar için yedek (`allowCredentials=true`, tek origin).
-- Şifre: BCrypt (strength 10–12), en az 8 karakter.
+- Şifre: BCrypt (strength 12, `auth.password.bcrypt-strength`), en az 8 karakter, en fazla **72 bayt** (UTF-8; BCrypt sınırı, Türkçe karakter 2 bayt).
+- Giriş: e-posta yok / şifre yanlış ayırt edilmez (`401 INVALID_CREDENTIALS`, aynı mesaj). E-posta kayıtlı değilse de sahte bir hash ile BCrypt karşılaştırması yapılır; yanıt süresinden kayıtlı e-postalar anlaşılamaz. Pasif hesap yalnızca şifre doğruysa `403 ACCOUNT_DISABLED` alır.
+- Kayıtta istemcinin gönderdiği `role` vb. alanlar yok sayılır; rol her zaman `USER`.
+- Servislerde hata gövdeleri common-lib `GlobalExceptionHandler` / `ApiErrorAuthenticationEntryPoint` / `ApiErrorAccessDeniedHandler` ile `ApiError` formatındadır; beklenmeyen hatalarda iç detay (SQL, stack trace) dönmez.
 - Giriş denemesi: basit rate limit (gateway veya auth-service); isteğe bağlı kilitleme.
 
 ## Roller ve Yetki Matrisi

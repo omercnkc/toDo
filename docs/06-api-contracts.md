@@ -16,7 +16,7 @@ Tüm istekler gateway üzerinden: `http://localhost:8080/api/...`. Gövde JSON. 
 ## auth-service
 | Metot | Yol | Yetki | Açıklama |
 |---|---|---|---|
-| POST | `/api/auth/register` | Herkese açık | Kayıt (rol: USER) |
+| POST | `/api/auth/register` | Herkese açık | `{email,password,fullName}` → `201` + `{id,email,fullName,role}` (rol: USER; otomatik giriş yok) |
 | POST | `/api/auth/login` | Herkese açık | `{email,password}` → `{accessToken,expiresIn,user}` + `Set-Cookie: refresh_token` |
 | POST | `/api/auth/refresh` | Herkese açık | Gövde yok; refresh token cookie'den okunur → `{accessToken,expiresIn,user}` + yeni cookie (rotasyon). Cookie yok/geçersiz → 401 |
 | POST | `/api/auth/logout` | Cookie sahibi | Refresh token iptali + cookie silinir (`Max-Age=0`) → 204 |
@@ -37,6 +37,16 @@ Giriş yanıtı:
 Set-Cookie: refresh_token=9f2c...; HttpOnly; Secure; SameSite=Strict; Path=/api/auth; Max-Age=604800
 ```
 Refresh token hiçbir zaman JSON gövdesinde dönmez.
+
+auth hata kodları (`error` alanı):
+| Durum | `error` | Ne zaman |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Geçersiz alan (`fieldErrors`): e-posta biçimi, şifre 8 karakter–72 bayt, ad boş/uzun |
+| 400 | `BAD_REQUEST` | Okunamayan JSON |
+| 401 | `INVALID_CREDENTIALS` | E-posta veya şifre hatalı (ikisi ayırt edilmez) |
+| 401 | `UNAUTHORIZED` | Korumalı uçta token yok/geçersiz (`WWW-Authenticate: Bearer`) |
+| 403 | `ACCOUNT_DISABLED` | Şifre doğru ama hesap pasif |
+| 409 | `EMAIL_ALREADY_EXISTS` | E-posta kayıtlı (büyük/küçük harf duyarsız) |
 
 ## project-service
 | Metot | Yol | Yetki | Açıklama |

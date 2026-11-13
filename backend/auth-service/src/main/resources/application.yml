@@ -28,6 +28,23 @@ spring:
           time_zone: UTC
   flyway:
     locations: classpath:db/migration
+  autoconfigure:
+    # Kullanıcılar DB'den doğrulanıyor; Boot'un "generated security password" ile kurduğu
+    # bellek içi kullanıcı deposuna gerek yok
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+auth:
+  jwt:
+    # En az 32 bayt; boşsa servis açılışta hata verir
+    secret: ${JWT_SECRET:}
+    access-token-ttl: 15m
+  refresh-token:
+    ttl: 7d
+    # Yerel http geliştirmede .env'de COOKIE_SECURE=false; varsayılan güvenli taraf
+    cookie-secure: ${COOKIE_SECURE:true}
+  password:
+    # docs/07: 10–12. Her +1 hash süresini ~2 katına çıkarır (12 ≈ 200–300 ms)
+    bcrypt-strength: 12
 
 eureka:
   client:
