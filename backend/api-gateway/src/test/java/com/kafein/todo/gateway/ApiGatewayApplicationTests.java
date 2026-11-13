@@ -2,9 +2,11 @@ package com.kafein.todo.gateway;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
-// Testler çalışan bir Eureka sunucusuna ihtiyaç duymasın
-@SpringBootTest(properties = "eureka.client.enabled=false")
+// Test profili: sabit JWT secret, Eureka kapalı (çalışan Eureka gerekmez)
+@SpringBootTest
+@ActiveProfiles("test")
 class ApiGatewayApplicationTests {
 
     @Test

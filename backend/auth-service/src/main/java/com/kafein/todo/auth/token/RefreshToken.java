@@ -2,6 +2,7 @@ package com.kafein.todo.auth.token;
 
 import com.kafein.todo.auth.user.User;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -17,6 +18,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
@@ -48,6 +50,13 @@ public class RefreshToken {
     @Column(nullable = false)
     private boolean revoked;
 
+    @Column(name = "revoked_at")
+    private Instant revokedAt;
+
+    @Convert(converter = RevokeReasonConverter.class)
+    @Column(name = "revoke_reason")
+    private RevokeReason revokeReason;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -60,10 +69,30 @@ public class RefreshToken {
 
     /** İptal edilmemiş ve süresi dolmamışsa kullanılabilir. */
     public boolean isActive(Instant now) {
-        return !revoked && expiresAt.isAfter(now);
+        return !revoked && isUsableAt(now);
     }
 
-    public void revoke() {
+    /** Süresi dolmamış mı (iptal durumuna bakmaz). */
+    public boolean isUsableAt(Instant now) {
+        return expiresAt.isAfter(now);
+    }
+
+    /** Zaten iptal edilmişse ilk iptalin zamanı ve nedeni korunur. */
+    public void revoke(RevokeReason reason, Instant now) {
+        if (revoked) {
+            return;
+        }
         this.revoked = true;
+        this.revokedAt = Objects.requireNonNull(now, "now");
+        this.revokeReason = Objects.requireNonNull(reason, "reason");
+    }
+
+    /**
+     * Rotasyonla az önce ({@code grace} içinde) iptal edilmiş mi? Aynı anda iki yenileme isteği
+     * geldiğinde (iki sekme) ikincisi bu durumdadır; tekrar kullanım saldırısı sayılmaz.
+     */
+    public boolean isRecentlyRotated(Instant now, Duration grace) {
+        return revoked && revokeReason == RevokeReason.ROTATED && revokedAt != null
+                && !now.isAfter(revokedAt.plus(grace));
     }
 }

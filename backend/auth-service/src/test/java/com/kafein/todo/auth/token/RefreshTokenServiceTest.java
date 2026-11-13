@@ -22,7 +22,7 @@ class RefreshTokenServiceTest {
     private final RefreshTokenRepository repository = mock(RefreshTokenRepository.class);
     private final AuthProperties properties = new AuthProperties(
             new AuthProperties.Jwt("x", Duration.ofMinutes(15)),
-            new AuthProperties.RefreshToken(Duration.ofDays(7), true),
+            new AuthProperties.RefreshToken(Duration.ofDays(7), true, Duration.ofSeconds(10)),
             new AuthProperties.Password(4));
     private final RefreshTokenService service =
             new RefreshTokenService(repository, Clock.fixed(NOW, ZoneOffset.UTC), properties);

@@ -1,7 +1,7 @@
 name: todo
 
 # Servisler ilgili fazlarda eklenir (bkz. docs/09-devops-docker.md).
-# Faz 0: MySQL. Faz 1: discovery-server + api-gateway.
+# Faz 0: MySQL. Faz 1: discovery-server + api-gateway. Faz 2: auth-service.
 
 # Backend servislerinin ortak build ayarı (SERVICE argümanı servis başına verilir)
 x-backend-build: &backend-build
@@ -55,7 +55,10 @@ services:
     environment:
       EUREKA_URL: http://discovery-server:8761/eureka
       EUREKA_INSTANCE_HOSTNAME: api-gateway
+      # Tarayıcının gördüğü frontend adresi; CORS + refresh/logout Origin kontrolü buna göre yapılır
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:4200}
+      # auth-service ile aynı anahtar (gateway token'ları doğrular)
+      JWT_SECRET: ${JWT_SECRET:?.env içinde JWT_SECRET gerekli}
       TZ: Europe/Istanbul
     ports:
       - "8080:8080"   # dış dünyaya açılan tek backend portu
@@ -68,6 +71,33 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  auth-service:
+    build:
+      <<: *backend-build
+      args:
+        SERVICE: auth-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/auth_db
+      SPRING_DATASOURCE_USERNAME: auth_user
+      SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:?.env içinde AUTH_DB_PASSWORD gerekli}
+      JWT_SECRET: ${JWT_SECRET:?.env içinde JWT_SECRET gerekli}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      EUREKA_URL: http://discovery-server:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: auth-service
+      TZ: Europe/Istanbul
+    # Port yayınlanmaz: yalnızca gateway üzerinden erişilir (docs/03)
+    depends_on:
+      mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
 
 volumes:
   mysql_data:

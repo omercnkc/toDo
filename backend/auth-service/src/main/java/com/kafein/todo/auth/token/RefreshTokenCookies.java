@@ -28,12 +28,19 @@ public class RefreshTokenCookies {
     }
 
     public ResponseCookie create(String rawToken) {
-        return ResponseCookie.from(NAME, rawToken)
+        return base(rawToken).maxAge(ttl).build();
+    }
+
+    /** Tarayıcıya cookie'yi silmesini söyler (aynı ad + Path, {@code Max-Age=0}). */
+    public ResponseCookie clear() {
+        return base("").maxAge(0).build();
+    }
+
+    private ResponseCookie.ResponseCookieBuilder base(String value) {
+        return ResponseCookie.from(NAME, value)
                 .httpOnly(true)
                 .secure(secure)
                 .sameSite("Strict")
-                .path(PATH)
-                .maxAge(ttl)
-                .build();
+                .path(PATH);
     }
 }

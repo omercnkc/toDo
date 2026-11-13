@@ -4,6 +4,12 @@ server:
 spring:
   application:
     name: api-gateway
+  config:
+    # Yerel geliştirmede repo kökündeki .env okunur (JWT_SECRET vb.); Docker'da env değişkenleri kullanılır
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+      - optional:file:../../.env[.properties]
   cloud:
     gateway:
       # Route'lar elle tanımlı. discovery.locator kapalı kalır: açılırsa Eureka'daki her servis
@@ -71,6 +77,14 @@ gateway:
     open-paths:
       - /api/auth/login
       - /api/auth/register
+      - /api/auth/refresh
+      - /api/auth/logout
+    # auth-service ile aynı anahtar; boş/kısaysa gateway açılmaz
+    jwt-secret: ${JWT_SECRET:}
+    # CORS ile aynı kaynak (virgülle birden fazla verilebilir)
+    allowed-origins: ${FRONTEND_ORIGIN:http://localhost:4200}
+    # Kimliği cookie ile doğrulanan yollar: Origin kontrolü (CSRF savunması, docs/07)
+    cookie-auth-paths:
       - /api/auth/refresh
       - /api/auth/logout
 

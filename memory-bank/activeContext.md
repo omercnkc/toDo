@@ -1,7 +1,7 @@
 # Active Context
 
 ## Şu anki odak
-Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2 devam ediyor; sıradaki: 2-C (refresh rotasyonu/tekrar kullanım tespiti + logout, gateway'de gerçek JWT doğrulama + X-User-* ekleme + refresh/logout Origin kontrolü).
+Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2 devam ediyor; sıradaki: 2-D (kullanıcı uçları: /users/me GET/PUT, şifre değiştirme, /users arama, ADMIN /users/{id} GET/PUT, /users/lookup; ADMIN seed; pasifleştirmede tüm refresh token'ları iptal; test tamamlama).
 
 Çalışma şekli: fazlar adımlara bölünür, küçük alt görevler 2–3'erli tek adımda; her adım sonunda değişiklik anlatımı + test sonucu + kullanıcı onayıyla commit.
 Faz 2 adımları: 2-A (JWT util + auth DB), 2-B (register/login + SecurityFilterChain + hata yönetimi), 2-C (refresh/logout + gateway gerçek JWT doğrulama + Origin kontrolü), 2-D (kullanıcı uçları + ADMIN seed + test tamamlama), 2-E (FE AuthService/APP_INITIALIZER/interceptor'lar), 2-F (routing/guard + login/register), 2-G (layout, profil, ADMIN liste, uçtan uca kontrol).
@@ -15,6 +15,10 @@ Faz 2 adımları: 2-A (JWT util + auth DB), 2-B (register/login + SecurityFilter
 - Test profili: `src/test/resources/application-test.yml` + `@ActiveProfiles("test")` (sabit JWT secret, bcrypt 4, eureka kapalı) — .env'e bağımlı olmasın.
 - Windows'ta curl ile Türkçe JSON gönderirken gövdeyi UTF-8 dosyadan (`--data-binary @dosya`) ver; komut satırı argümanı yanlış kodlanıp 400 alıyor.
 - Bilinen küçük eksik: servis ApiError.path'i StripPrefix sonrası yolu gösterir (`/auth/register`, `/api/...` değil).
+- 2-C tamam (2026-11-13): `POST /auth/refresh` (rotasyon; FOR UPDATE kilidi; ROTATED token'a 10 sn tolerans; aksi halde REUSE_DETECTED → tüm token'lar iptal, `noRollbackFor`), `POST /auth/logout` (idempotent 204). Geçersiz refresh → 401 `INVALID_REFRESH_TOKEN` + cookie silme (AuthController'da yerel @ExceptionHandler). V2 migration: `revoked_at`, `revoke_reason`.
+- Gateway: gerçek JWT doğrulama (`JwtService.verifierOnly`, `gateway.security.jwt-secret=${JWT_SECRET}`), geçerliyse `X-User-Id/Role` yazılır; refresh/logout'ta Origin kontrolü (`cookie-auth-paths`, `allowed-origins=${FRONTEND_ORIGIN}`). Gateway de .env'i import ediyor; test profili `application-test.yml`.
+- Yabancı Origin'i gateway'de önce CORS katmanı reddediyor (gövdesiz 403); `FRONTEND_ORIGIN` public frontend adresiyle birebir aynı olmalı, yoksa aynı origin POST'ları da 403.
+- Compose'a auth-service eklendi (port yayınlanmaz); gateway'e `JWT_SECRET` env'i eklendi.
 
 ## Faz 1'de kurulanlar
 - Gateway: route'lar `lb://` + `StripPrefix=1` (servis controller'ları `/api` önekisiz), `/api/invitations/**` → project-service, discovery.locator kapalı, `/internal/**` route yok.

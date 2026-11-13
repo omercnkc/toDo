@@ -1,14 +1,19 @@
 package com.kafein.todo.gateway;
 
+import com.kafein.todo.common.security.AuthenticatedUser;
+import com.kafein.todo.common.security.JwtService;
+import com.kafein.todo.common.security.Role;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.net.URI;
+import java.time.Duration;
 
 /**
  * Gerçek port üzerinde route, CORS ve kimlik filtresi davranışı.
@@ -17,10 +22,14 @@ import java.net.URI;
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"eureka.client.enabled=false", "FRONTEND_ORIGIN=http://localhost:4200"})
+        properties = "FRONTEND_ORIGIN=http://localhost:4200")
+@ActiveProfiles("test")
 class GatewayRoutingIntegrationTest {
 
     private static final String ALLOWED_ORIGIN = "http://localhost:4200";
+    /** application-test.yml'deki secret ile aynı (auth-service'in token'ını taklit eder). */
+    private static final JwtService ISSUER =
+            new JwtService("test-secret-test-secret-test-secret-123", Duration.ofMinutes(15));
 
     @Autowired
     private WebTestClient client;
@@ -47,11 +56,20 @@ class GatewayRoutingIntegrationTest {
     }
 
     @Test
+    void protectedPathWithInvalidTokenIs401() {
+        client.get().uri("/api/projects")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer dummy")
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
     void everyServiceRouteExists() {
+        String token = validToken();
         for (String path : new String[]{"/api/users/me", "/api/projects", "/api/invitations",
                 "/api/tasks", "/api/dashboard"}) {
             client.get().uri(path)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer dummy")
+                    .header(HttpHeaders.AUTHORIZATION, token)
                     .exchange()
                     .expectStatus().isEqualTo(503);
         }
@@ -60,7 +78,7 @@ class GatewayRoutingIntegrationTest {
     @Test
     void internalPathsAreNotRouted() {
         client.delete().uri("/internal/tasks/by-project/1")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer dummy")
+                .header(HttpHeaders.AUTHORIZATION, validToken())
                 .exchange()
                 .expectStatus().isNotFound();
     }
@@ -70,10 +88,28 @@ class GatewayRoutingIntegrationTest {
         // Ham, tam URI: istemci tarafında normalize/yeniden kodlama olmasın
         // (URI nesnesine base URL eklenmediği için port açıkça yazılır)
         client.delete().uri(URI.create("http://localhost:" + port + "/api/tasks/%2e%2e/internal/tasks/by-project/1"))
-                .header(HttpHeaders.AUTHORIZATION, "Bearer dummy")
+                .header(HttpHeaders.AUTHORIZATION, validToken())
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody().jsonPath("$.error").isEqualTo("BAD_REQUEST");
+    }
+
+    @Test
+    void refreshFromForeignOriginIsRejected() {
+        // Uçtan uca ilk engel CORS katmanı (gövdesiz 403); AuthenticationFilter'daki Origin kontrolü
+        // CORS gevşetilirse devreye giren ikinci katman (AuthenticationFilterTest'te ayrıca test edilir).
+        client.post().uri("/api/auth/refresh")
+                .header(HttpHeaders.ORIGIN, "http://evil.example")
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    void refreshFromAllowedOriginIsRouted() {
+        client.post().uri("/api/auth/refresh")
+                .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN)
+                .exchange()
+                .expectStatus().isEqualTo(503);
     }
 
     @Test
@@ -105,5 +141,9 @@ class GatewayRoutingIntegrationTest {
                 .exchange()
                 .expectStatus().isUnauthorized()
                 .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, ALLOWED_ORIGIN);
+    }
+
+    private static String validToken() {
+        return "Bearer " + ISSUER.generateAccessToken(new AuthenticatedUser(1L, "a@b.com", Role.USER));
     }
 }

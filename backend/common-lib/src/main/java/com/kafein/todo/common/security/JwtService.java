@@ -42,15 +42,24 @@ public class JwtService {
     }
 
     public JwtService(String secret, Duration accessTokenTtl, Clock clock) {
+        this(secret, requirePositive(accessTokenTtl), clock, true);
+    }
+
+    /**
+     * Yalnızca doğrulama yapan örnek (gateway gibi token üretmeyen bileşenler için).
+     * {@link #generateAccessToken} çağrılırsa hata verir.
+     */
+    public static JwtService verifierOnly(String secret, Clock clock) {
+        return new JwtService(secret, null, clock, false);
+    }
+
+    private JwtService(String secret, Duration accessTokenTtl, Clock clock, boolean canIssue) {
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
             throw new IllegalArgumentException(
                     "JWT secret en az " + MIN_SECRET_BYTES + " bayt olmalı (JWT_SECRET ortam değişkeni)");
         }
-        if (accessTokenTtl == null || accessTokenTtl.isZero() || accessTokenTtl.isNegative()) {
-            throw new IllegalArgumentException("Access token süresi pozitif olmalı");
-        }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.accessTokenTtl = accessTokenTtl;
+        this.accessTokenTtl = canIssue ? accessTokenTtl : null; // null: yalnızca doğrulama
         this.clock = clock;
         this.parser = Jwts.parser()
                 .verifyWith(key)
@@ -59,6 +68,9 @@ public class JwtService {
     }
 
     public String generateAccessToken(AuthenticatedUser user) {
+        if (accessTokenTtl == null) {
+            throw new IllegalStateException("Bu JwtService yalnızca doğrulama için oluşturuldu");
+        }
         Instant now = clock.instant();
         return Jwts.builder()
                 .subject(Long.toString(user.id()))
@@ -97,6 +109,13 @@ public class JwtService {
     /** Access token ömrü; login yanıtındaki {@code expiresIn} alanı için. */
     public Duration getAccessTokenTtl() {
         return accessTokenTtl;
+    }
+
+    private static Duration requirePositive(Duration ttl) {
+        if (ttl == null || ttl.isZero() || ttl.isNegative()) {
+            throw new IllegalArgumentException("Access token süresi pozitif olmalı");
+        }
+        return ttl;
     }
 
     private static AuthenticatedUser toUser(Claims claims) {

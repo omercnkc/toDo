@@ -140,6 +140,16 @@ class JwtServiceTest {
     }
 
     @Test
+    void yalnizcaDogrulayanOrnekTokenCozerAmaUretemez() {
+        JwtService verifier = JwtService.verifierOnly(SECRET, clockAt(NOW));
+
+        assertThat(verifier.parseAccessToken(service.generateAccessToken(USER))).isEqualTo(USER);
+        assertThatThrownBy(() -> verifier.generateAccessToken(USER)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> JwtService.verifierOnly("kisa", clockAt(NOW)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void sureSifirVeyaNegatifOlamaz() {
         assertThatThrownBy(() -> new JwtService(SECRET, Duration.ZERO)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new JwtService(SECRET, Duration.ofMinutes(-1)))

@@ -99,7 +99,7 @@ npm start                       # http://localhost:4200  (/api -> :8080 proxy)
 Altyapı servisleri Docker ile de çalıştırılabilir (Eureka paneli: http://localhost:8761):
 
 ```bash
-docker compose up -d --build discovery-server api-gateway
+docker compose up -d --build discovery-server api-gateway auth-service
 ```
 
 > **Windows notu:** `docker compose build`, `failed to execute bake: exit status 1` hatası verirse terminalin
@@ -119,7 +119,7 @@ Gizli bilgiler repoda tutulmaz. `.env.example`'ı `.env` olarak kopyalayıp dold
 | `JWT_SECRET` | HS256 imza anahtarı (en az 32 bayt) |
 | `COOKIE_SECURE` | Refresh cookie'nin `Secure` bayrağı (yerel http'de `false`) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | İlk açılışta oluşturulan ADMIN kullanıcısı |
-| `FRONTEND_ORIGIN` | Gateway CORS'unun izin verdiği tek origin (varsayılan `http://localhost:4200`) |
+| `FRONTEND_ORIGIN` | Tarayıcının gördüğü frontend adresi (varsayılan `http://localhost:4200`). Gateway CORS'u ve refresh/logout Origin kontrolü buna göre yapılır; farklı bir adreste yayınlıyorsanız birebir aynı yazılmalı, yoksa POST istekleri 403 alır |
 
 ## Portlar
 

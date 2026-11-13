@@ -78,12 +78,28 @@ public class AuthService {
             throw ApiException.forbidden("ACCOUNT_DISABLED", "Hesabınız pasif durumda");
         }
 
+        return new LoginResult(authResponse(user), refreshTokens.issue(user));
+    }
+
+    /**
+     * Cookie'deki refresh token ile yeni access token + yeni refresh token (rotasyon).
+     * Rol/ad değiştiyse yeni access token güncel bilgiyi taşır.
+     *
+     * @throws com.kafein.todo.auth.token.InvalidRefreshTokenException token geçersizse
+     */
+    public LoginResult refresh(String rawRefreshToken) {
+        RefreshTokenService.Rotation rotation = refreshTokens.rotate(rawRefreshToken);
+        return new LoginResult(authResponse(rotation.user()), rotation.newRawToken());
+    }
+
+    public void logout(String rawRefreshToken) {
+        refreshTokens.revoke(rawRefreshToken);
+    }
+
+    private AuthResponse authResponse(User user) {
         String accessToken = jwtService.generateAccessToken(
                 new AuthenticatedUser(user.getId(), user.getEmail(), user.getRole()));
-        String refreshToken = refreshTokens.issue(user);
-        AuthResponse response = new AuthResponse(accessToken, jwtService.getAccessTokenTtl().toSeconds(),
-                UserResponse.from(user));
-        return new LoginResult(response, refreshToken);
+        return new AuthResponse(accessToken, jwtService.getAccessTokenTtl().toSeconds(), UserResponse.from(user));
     }
 
     private static ApiException emailTaken() {

@@ -41,6 +41,8 @@ Sabit değerli alanlar (`role`, `status`, `member_role`, `priority`, davet `stat
 | token_hash | CHAR(64) | UNIQUE (SHA-256; ham token saklanmaz) |
 | expires_at | DATETIME(6) | NOT NULL |
 | revoked | BOOLEAN | NOT NULL, default false |
+| revoked_at | DATETIME(6) | NULL (V2) |
+| revoke_reason | TINYINT UNSIGNED | NULL (V2; 0=`ROTATED`, 1=`LOGOUT`, 2=`REUSE_DETECTED`) |
 | created_at | DATETIME(6) | NOT NULL |
 
 ## project_db

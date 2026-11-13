@@ -20,7 +20,11 @@ public record AuthProperties(@Valid @NotNull Jwt jwt,
     public record Jwt(String secret, @NotNull Duration accessTokenTtl) {
     }
 
-    public record RefreshToken(@NotNull Duration ttl, boolean cookieSecure) {
+    /**
+     * @param reuseGrace rotasyonla iptal edilmiş token bu süre içinde tekrar gelirse eşzamanlı
+     *                   yenileme sayılır (alarm yok); sonrasında tekrar kullanım = tüm oturumlar iptal
+     */
+    public record RefreshToken(@NotNull Duration ttl, boolean cookieSecure, @NotNull Duration reuseGrace) {
     }
 
     public record Password(@Min(4) @Max(31) int bcryptStrength) {

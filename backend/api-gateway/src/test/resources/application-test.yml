@@ -1,0 +1,9 @@
+# @ActiveProfiles("test") ile yüklenir; .env'den bağımsız (CI'da .env yok).
+gateway:
+  security:
+    jwt-secret: test-secret-test-secret-test-secret-123
+    allowed-origins: http://localhost:4200
+
+eureka:
+  client:
+    enabled: false

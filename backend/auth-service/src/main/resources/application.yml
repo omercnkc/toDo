@@ -42,6 +42,8 @@ auth:
     ttl: 7d
     # Yerel http geliştirmede .env'de COOKIE_SECURE=false; varsayılan güvenli taraf
     cookie-secure: ${COOKIE_SECURE:true}
+    # Aynı anda iki yenileme (iki sekme) için tolerans; bkz. RefreshTokenService#rotate
+    reuse-grace: 10s
   password:
     # docs/07: 10–12. Her +1 hash süresini ~2 katına çıkarır (12 ≈ 200–300 ms)
     bcrypt-strength: 12
