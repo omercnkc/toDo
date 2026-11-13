@@ -2,16 +2,49 @@
 
 Her faz sonunda çalışır, test edilebilir bir ara çıktı hedeflenir.
 
-| Faz | İçerik | Bitiş Kriteri |
-|---|---|---|
-| **0 – İskelet** | Monorepo, Maven parent + modül iskeletleri, `common-lib`, `docker-compose` (MySQL + init.sh), Maven Wrapper, `.env.example`, Angular projesi (`ng new`, Bootstrap/SCSS kurulumu) | `docker compose up mysql` çalışır; backend `./mvnw package` ve frontend `ng build` derlenir |
-| **1 – Altyapı** | `discovery-server`, `api-gateway` (route'lar, CORS, JWT filtresi iskeleti) | Eureka panelinde gateway görünür; gateway ayakta |
-| **2 – Kimlik** | `auth-service` (register/login/refresh/logout, kullanıcı yönetimi, Flyway), gateway JWT doğrulama, httpOnly refresh cookie; frontend: login/register, AuthInterceptor, `APP_INITIALIZER` sessiz refresh, guard'lar, layout | Tarayıcıdan kayıt → giriş → korumalı sayfa; sayfa yenilenince oturum korunur; `localStorage`'da token yok; token yenileme çalışır; ADMIN kullanıcı listesi |
-| **3 – Proje** | `project-service` (CRUD, üyelik, auth-service Feign); davet/onay akışı; frontend: proje liste/detay/form, üye yönetimi, "Davetlerim" sayfası + navbar'da bekleyen davet rozeti | Proje oluştur/düzenle/arşivle, davet gönder → karşı taraf kabul edince üye olur, reddedince olmaz; üye çıkar; yetkisiz erişim 403 |
-| **4 – Görev & Kanban** | `task-service` (CRUD, status, move, board, üyelik doğrulama Feign, `/internal/tasks/by-project`); project-service outbox tablosu + relay; frontend: Kanban + görev modalı + CDK drag-drop (iyimser güncelleme) | Sürükle-bırak sonrası yenileyince durum/sıra korunur; proje kalıcı silinince görevleri temizlenir (task-service kapalıyken silinirse servis açılınca temizlenir) |
-| **5 – Arama/Filtre/Sıralama** | Specification tabanlı liste ucu, indeksler; frontend: liste görünümü, arama (debounce), filtreler, sıralama, sayfalama, URL senkronu | Tüm filtre kombinasyonları doğru sonuç verir; büyük veride makul sürede döner |
-| **6 – Dashboard** | `task-service` stats ucu, `dashboard-service` (Feign toplama, opsiyonel cache); frontend dashboard + grafikler | Özet sayıları, DB ile tutarlı; ADMIN/USER kapsamı doğru |
-| **7 – Cila & Teslim** | Responsive düzeltmeleri, hata/boş durum ekranları, birim + entegrasyon testleri (Testcontainers), Swagger doğrulaması, güvenlik gözden geçirme, tüm sistem Docker ile uçtan uca, README/çalıştırma talimatları | `docker compose up --build` ile tüm akış (giriş → proje → görev → Kanban → dashboard) mobil ve masaüstünde sorunsuz |
+| Faz | İçerik | Bitiş Kriteri | Durum |
+|---|---|---|---|
+| **0 – İskelet** | Monorepo, Maven parent + modül iskeletleri, `common-lib`, `docker-compose` (MySQL + init.sh), Maven Wrapper, `.env.example`, Angular projesi (`ng new`, Bootstrap/SCSS kurulumu) | `docker compose up mysql` çalışır; backend `./mvnw package` ve frontend `ng build` derlenir | ✅ 2026-11-12 |
+| **1 – Altyapı** | `discovery-server`, `api-gateway` (route'lar, CORS, JWT filtresi iskeleti) | Eureka panelinde gateway görünür; gateway ayakta | ✅ 2026-11-13 |
+| **2 – Kimlik** | `auth-service` (register/login/refresh/logout, kullanıcı yönetimi, Flyway), gateway JWT doğrulama, httpOnly refresh cookie; frontend: login/register, AuthInterceptor, `APP_INITIALIZER` sessiz refresh, guard'lar, layout | Tarayıcıdan kayıt → giriş → korumalı sayfa; sayfa yenilenince oturum korunur; `localStorage`'da token yok; token yenileme çalışır; ADMIN kullanıcı listesi | 🔄 5/7 adım |
+| **3 – Proje** | `project-service` (CRUD, üyelik, auth-service Feign); davet/onay akışı; frontend: proje liste/detay/form, üye yönetimi, "Davetlerim" sayfası + navbar'da bekleyen davet rozeti | Proje oluştur/düzenle/arşivle, davet gönder → karşı taraf kabul edince üye olur, reddedince olmaz; üye çıkar; yetkisiz erişim 403 | ⏳ |
+| **4 – Görev & Kanban** | `task-service` (CRUD, status, move, board, üyelik doğrulama Feign, `/internal/tasks/by-project`); project-service outbox tablosu + relay; frontend: Kanban + görev modalı + CDK drag-drop (iyimser güncelleme) | Sürükle-bırak sonrası yenileyince durum/sıra korunur; proje kalıcı silinince görevleri temizlenir (task-service kapalıyken silinirse servis açılınca temizlenir) | ⏳ |
+| **5 – Arama/Filtre/Sıralama** | Specification tabanlı liste ucu, indeksler; frontend: liste görünümü, arama (debounce), filtreler, sıralama, sayfalama, URL senkronu | Tüm filtre kombinasyonları doğru sonuç verir; büyük veride makul sürede döner | ⏳ |
+| **6 – Dashboard** | `task-service` stats ucu, `dashboard-service` (Feign toplama, opsiyonel cache); frontend dashboard + grafikler | Özet sayıları, DB ile tutarlı; ADMIN/USER kapsamı doğru | ⏳ |
+| **7 – Cila & Teslim** | Responsive düzeltmeleri, hata/boş durum ekranları, birim + entegrasyon testleri (Testcontainers), Swagger doğrulaması, güvenlik gözden geçirme, tüm sistem Docker ile uçtan uca, README/çalıştırma talimatları | `docker compose up --build` ile tüm akış (giriş → proje → görev → Kanban → dashboard) mobil ve masaüstünde sorunsuz | ⏳ |
+
+Durum: ✅ tamamlandı · 🔄 devam ediyor · ⏳ başlanmadı
+
+## Alt Görevler ve İlerleme
+Her faz başlarken adımlara bölünür; küçük alt görevler 2–3'erli tek adımda toplanır. Her adım kendi testleriyle biter, uçtan uca doğrulanır ve ayrı commit olur. Bu bölüm her adımın sonunda güncellenir.
+
+### Faz 0 – İskelet ✅
+Tek adımda yapıldı (commit'ler `6606481` → `28525e4`).
+- **Repo ve planlama:** monorepo, `.gitignore`/`.editorconfig`/`.gitattributes`, `docs/00–10`, memory-bank.
+- **Backend iskeleti:** Maven parent (Boot 3.3.13, Cloud 2023.0.6) + Maven Wrapper, 7 modül iskeleti; `common-lib`'de `ApiError` ve `PageResponse`.
+- **Docker:** MySQL 8 compose; `init.sh` üç şemayı ve her biri yalnızca kendi şemasına yetkili üç kullanıcıyı `.env` şifreleriyle oluşturur.
+- **Frontend iskeleti:** Angular 13.3 + Bootstrap 5.2.3 + SCSS, `/api` proxy'si, `core/shared/features/layout` klasörleri.
+
+### Faz 1 – Altyapı ✅
+| Adım | Alt görevler | Durum | Commit | Kısaca ne yapıldı |
+|---|---|---|---|---|
+| 1-A | Eureka sunucusu + gateway'in Eureka kaydı | ✅ | `052625d` | discovery-server'a actuator ve geliştirme ayarları (self-preservation kapalı, hızlı eviction); gateway Eureka client oldu (`EUREKA_URL`, sabit hostname). |
+| 1-B | Route'lar + CORS + JWT filtre iskeleti | ✅ | `882d6c9` | `lb://` route'ları (`StripPrefix=1`; `/api/invitations` → project-service eklendi), `/internal/**` route edilmez; tek origin CORS; `AuthenticationFilter`: yol hilelerini (`..`, `%2e`, `;`) 400 ile reddeder, sahte `X-User-*` header'larını siler, Bearer yoksa 401. |
+| 1-C | Docker + uçtan uca kontrol | ✅ | `b7b5f2d` | Tüm servisler için tek `backend/Dockerfile` (`SERVICE` argümanı), `.dockerignore`, compose'a discovery + gateway (healthcheck'li); Windows `d:`/`D:` bake sorunu README'ye not edildi. |
+
+### Faz 2 – Kimlik 🔄
+| Adım | Alt görevler | Durum | Commit | Kısaca ne yapıldı |
+|---|---|---|---|---|
+| 2-A | common-lib JWT + auth-service veritabanı | ✅ | `a775843` | `JwtService` (yalnızca HS256, `exp` zorunlu), `JwtAuthenticationFilter`, `AuthenticatedUser`, `Role`, `CodedEnumConverter`; auth-service'e Flyway `V1` (users, refresh_tokens), entity'ler, repository'ler; Testcontainers ile gerçek MySQL testleri. |
+| 2-B | Kayıt/giriş + güvenlik zinciri + hata yönetimi | ✅ | `9a28d28` | `POST /auth/register` ve `/auth/login` (refresh token httpOnly cookie'de, DB'de SHA-256 hash'i); kullanıcı keşfine karşı tek hata mesajı + sahte BCrypt; şifre en az 8 karakter, en fazla 72 bayt; common-lib'de ortak `GlobalExceptionHandler` (servlet servislerine otomatik yüklenir). |
+| 2-C | Refresh/logout + gateway gerçek JWT doğrulaması | ✅ | `13d371a` | Refresh rotasyonu, tekrar kullanımda tüm oturumların iptali; iki sekme sorunu için `FOR UPDATE` kilidi + 10 sn tolerans (`V2`); idempotent logout; gateway token'ı doğrulayıp `X-User-Id/Role` ekler, refresh/logout'ta Origin kontrolü; compose'a auth-service. |
+| 2-D | Kullanıcı uçları + ADMIN seed + test tamamlama | ✅ | `c3833fd` | `/users/me` (profil, ad, şifre değiştirme → tüm oturumlar kapanır), `/users?q=` (USER: ≥3 karakter + özet; ADMIN: tüm liste), ADMIN rol/aktiflik yönetimi (kendini değiştiremez); servisler arası uçlar `/internal/users/**` altına alındı; `.env`'den ADMIN seed; `V3`. |
+| 2-E | Frontend çekirdeği: AuthService + interceptor'lar + bildirimler | ✅ | `119aca2` | Token yalnızca bellekte, `APP_INITIALIZER` ile sessiz refresh, tek seferlik refresh kilidi; `AuthInterceptor` 401'de yenileyip bir kez tekrar dener; `ErrorInterceptor` + `ToastService` yalnızca genel hatalarda bildirim; 33 birim testi, `ng serve` proxy'si üzerinden uçtan uca doğrulandı. |
+| 2-F | Routing + guard'lar + login/register sayfaları | ⏳ | | Lazy modül iskeleti, `AuthGuard`/`RoleGuard`, login ve register formları (sunucu `fieldErrors`'ı alanlara eşlenir), `returnUrl` ile kaldığı sayfaya dönüş. |
+| 2-G | Layout + profil + ADMIN listesi + uçtan uca kontrol | ⏳ | | Responsive navbar/layout ve çıkış, profil sayfası (ad, şifre), ADMIN kullanıcı listesi; faz bitiş kriterlerinin tarayıcıda doğrulanması. |
+
+### Faz 3–7
+Henüz başlanmadı; her faz başlarken bu bölümde adımlara bölünecek.
 
 ## Bağımlılık Sırası
 `0 → 1 → 2 → 3 → 4 → (5, 6 paralel olabilir) → 7`. Frontend ve backend her fazda paralel ilerleyebilir (API sözleşmesi 06'da sabit).

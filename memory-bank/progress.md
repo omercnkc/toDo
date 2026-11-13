@@ -7,7 +7,7 @@
 ## Yapılacaklar (docs/10-roadmap.md fazları)
 - [x] Faz 0 – İskelet (monorepo, Maven parent, common-lib, compose+MySQL, Angular projesi) — 2026-11-12 tamamlandı (mvnw package, ng build, testler, MySQL şema/kullanıcı izolasyonu doğrulandı)
 - [x] Faz 1 – discovery-server + api-gateway — 2026-11-13 tamamlandı (3 adım: 1-A Eureka, 1-B route/CORS/filtre iskeleti, 1-C Docker; jar ve Docker'da Eureka kaydı + route/401/404/400/CORS doğrulandı)
-- [ ] Faz 2 – auth-service + frontend login/layout
+- [ ] Faz 2 – auth-service + frontend login/layout — devam ediyor (2-A..2-E tamam, 2-F/2-G kaldı; adım ayrıntıları docs/10-roadmap.md "Alt Görevler ve İlerleme")
 - [ ] Faz 3 – project-service + proje ekranları + davet akışı
 - [ ] Faz 4 – task-service + Kanban + outbox relay (proje kalıcı silme)
 - [ ] Faz 5 – Arama/filtre/sıralama
