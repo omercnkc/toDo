@@ -4,6 +4,51 @@ server:
 spring:
   application:
     name: api-gateway
+  cloud:
+    gateway:
+      # Route'lar elle tanımlı. discovery.locator kapalı kalır: açılırsa Eureka'daki her servis
+      # (ve /internal/** uçları) /<servis-adı>/** altında otomatik dışarı açılırdı.
+      routes:
+        # StripPrefix=1: /api/auth/login → auth-service'e /auth/login olarak gider.
+        # Servis controller'ları /api öneki olmadan yazılır; Feign çağrılarıyla aynı yollar.
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**,/api/users/**
+          filters:
+            - StripPrefix=1
+        - id: project-service
+          uri: lb://project-service
+          predicates:
+            - Path=/api/projects/**,/api/invitations/**
+          filters:
+            - StripPrefix=1
+        - id: task-service
+          uri: lb://task-service
+          predicates:
+            - Path=/api/tasks/**
+          filters:
+            - StripPrefix=1
+        - id: dashboard-service
+          uri: lb://dashboard-service
+          predicates:
+            - Path=/api/dashboard/**
+          filters:
+            - StripPrefix=1
+      # /internal/** için route yok → gateway 404 döner.
+
+      # CORS yalnızca yedek: frontend normalde aynı origin'den (/api, proxy/nginx) gelir.
+      globalcors:
+        cors-configurations:
+          '[/api/**]':
+            allowed-origins: ${FRONTEND_ORIGIN:http://localhost:4200}
+            allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+            allowed-headers: Authorization,Content-Type
+            allow-credentials: true
+            max-age: 3600
+      default-filters:
+        # Servis de CORS header'ı eklerse tarayıcı çift header'ı reddeder; tekini bırak
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
 
 eureka:
   client:
@@ -17,6 +62,17 @@ eureka:
     hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
     lease-renewal-interval-in-seconds: 10
     lease-expiration-duration-in-seconds: 30
+
+gateway:
+  security:
+    # JWT gerektirmeyen yollar (gateway'e gelen hâliyle, /api önekiyle).
+    # logout access token değil refresh cookie'si ile doğrulanır; access token süresi
+    # dolmuş olsa da çıkış yapılabilmeli (bkz. docs/06, docs/07).
+    open-paths:
+      - /api/auth/login
+      - /api/auth/register
+      - /api/auth/refresh
+      - /api/auth/logout
 
 management:
   endpoints:

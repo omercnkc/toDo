@@ -13,8 +13,17 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.kafein.todo</groupId>
+            <artifactId>common-lib</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway</artifactId>
+        </dependency>
+        <!-- LoadBalancer'ın önerdiği önbellek (varsayılan önbellek yalnızca geliştirme için) -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
