@@ -36,6 +36,11 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
+        <!-- auth-service çağrıları (AuthClient); servis adresi Eureka + LoadBalancer ile bulunur -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
 
         <!-- Veritabanı: şema Flyway'e ait, Hibernate yalnızca doğrular -->
         <dependency>

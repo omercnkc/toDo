@@ -22,6 +22,10 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
 
     long countByProjectId(Long projectId);
 
+    /** Kullanıcının üyesi olduğu proje id'leri (dahili uç; user_id indeksi). */
+    @Query("select m.project.id from ProjectMember m where m.userId = :userId order by m.project.id")
+    List<Long> findProjectIdsByUserId(@Param("userId") Long userId);
+
     /** Liste sayfasındaki projelerin üye sayıları (tek sorgu). */
     @Query("""
             select m.project.id as projectId, count(m) as memberCount

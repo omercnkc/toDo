@@ -28,6 +28,14 @@ spring:
           time_zone: UTC
   flyway:
     locations: classpath:db/migration
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            # auth-service yanıt vermezse kullanıcı isteği uzun süre asılı kalmasın (→ 503 USER_SERVICE_UNAVAILABLE)
+            connect-timeout: 2000
+            read-timeout: 5000
   autoconfigure:
     # Kullanıcı deposu yok (kimlik JWT'den gelir); Boot'un bellek içi kullanıcısına gerek yok
     exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration

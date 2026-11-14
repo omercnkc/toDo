@@ -1,32 +1,16 @@
 package com.kafein.todo.project.project;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kafein.todo.common.security.AuthenticatedUser;
-import com.kafein.todo.common.security.JwtService;
-import com.kafein.todo.common.security.Role;
-import com.kafein.todo.project.TestcontainersConfiguration;
+import com.kafein.todo.project.IntegrationTestSupport;
 import com.kafein.todo.project.member.ProjectMember;
-import com.kafein.todo.project.member.ProjectMemberRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -38,68 +22,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Proje uçları: gerçek güvenlik zinciri + gerçek MySQL. Testler aynı veritabanını paylaştığı için her test
- * kendine özgü kullanıcı id'leri kullanır (sonuçlar başka testlerin verisinden etkilenmez).
- */
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Import(TestcontainersConfiguration.class)
-class ProjectControllerIntegrationTest {
+/** Proje uçları: gerçek güvenlik zinciri + gerçek MySQL (ortak kurulum {@link IntegrationTestSupport}). */
+class ProjectControllerIntegrationTest extends IntegrationTestSupport {
 
-    private static final String SECRET = "test-secret-test-secret-test-secret-123"; // application-test.yml
-    private static final AtomicLong IDS = new AtomicLong(1_000);
-    private static final JwtService JWT = new JwtService(SECRET, Duration.ofMinutes(15));
-
-    @Autowired
-    private MockMvc mvc;
-    @Autowired
-    private ObjectMapper objectMapper;
-    @Autowired
-    private ProjectRepository projects;
-    @Autowired
-    private ProjectMemberRepository members;
     @Autowired
     private JdbcTemplate jdbc;
-
-    private AuthenticatedUser owner;
-    private AuthenticatedUser member;
-    private AuthenticatedUser stranger;
-    private AuthenticatedUser admin;
-
-    @BeforeEach
-    void users() {
-        owner = user(Role.USER);
-        member = user(Role.USER);
-        stranger = user(Role.USER);
-        admin = user(Role.ADMIN);
-    }
-
-    private static AuthenticatedUser user(Role role) {
-        long id = IDS.incrementAndGet();
-        return new AuthenticatedUser(id, "kullanici" + id + "@ornek.com", role);
-    }
-
-    private ResultActions perform(MockHttpServletRequestBuilder request, AuthenticatedUser as) throws Exception {
-        return mvc.perform(request.header(HttpHeaders.AUTHORIZATION, "Bearer " + JWT.generateAccessToken(as)));
-    }
-
-    private ResultActions send(MockHttpServletRequestBuilder request, AuthenticatedUser as, Object body) throws Exception {
-        return perform(request.contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)), as);
-    }
-
-    /** Proje oluşturur (owner OWNER olur) ve id'sini döndürür; istenirse {@code member}'ı MEMBER ekler. */
-    private long createProject(String name, boolean withMember) throws Exception {
-        String json = send(post("/projects"), owner, Map.of("name", name, "description", "Açıklama"))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-        long id = objectMapper.readTree(json).get("id").asLong();
-        if (withMember) {
-            members.saveAndFlush(ProjectMember.member(projects.findById(id).orElseThrow(), member.id()));
-        }
-        return id;
-    }
 
     private List<Long> listIds(AuthenticatedUser as, String query) throws Exception {
         String json = perform(get("/projects" + query), as).andExpect(status().isOk())

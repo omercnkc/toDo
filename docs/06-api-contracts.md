@@ -88,6 +88,12 @@ Proje uçları uygulama notları (3-B):
 - `DELETE` arşivler ve idempotenttir (zaten arşivdeyse de 204). `?permanent=true` Faz 4'e kadar 400 `PERMANENT_DELETE_NOT_AVAILABLE`.
 - Sınırlar: ad 1–150 karakter, açıklama en fazla 5000 karakter (boş açıklama `null` saklanır).
 
+Üye uçları uygulama notları (3-C):
+- `GET /projects/{id}/members` → `[{userId, email, fullName, enabled, role, joinedAt}]`, önce OWNER sonra katılma sırası, sayfasız. Ad/e-posta/aktiflik auth-service'ten tek toplu `lookup` çağrısıyla (200'lük parçalar). auth-service'e ulaşılamazsa liste yine 200 döner, bu üç alan `null` olur (arayüz "Kullanıcı #id" gösterir).
+- `DELETE /projects/{id}/members/{userId}` → 204. Hatalar: üye değil 404 `MEMBER_NOT_FOUND`, OWNER 409 `OWNER_CANNOT_BE_REMOVED`, arşivlenmiş proje 409 `PROJECT_ARCHIVED`. Faz 4: çıkarılan kişiye atanmış görevlerin `assigneeId`'si boşaltılacak.
+- Dahili uçlar (gateway'den erişilemez; geçerli bir kullanıcı token'ı yeterli): `GET /internal/projects/{id}/members/{userId}` → `{projectId, userId, role, projectStatus}` veya 404 `MEMBERSHIP_NOT_FOUND`; `GET /internal/projects/accessible?userId=` → proje id listesi.
+- auth-service çağrıları hata verirse (davet gönderme gibi adın zorunlu olduğu yerlerde) 503 `USER_SERVICE_UNAVAILABLE`. Feign zaman aşımları: bağlantı 2 sn, okuma 5 sn.
+
 Davet yanıtı:
 ```json
 { "id": 7, "status": "PENDING", "createdAt": "2026-11-11T10:00:00Z",
