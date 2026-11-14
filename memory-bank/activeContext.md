@@ -1,7 +1,7 @@
 # Active Context
 
 ## Şu anki odak
-Faz 3 (proje) tamamlandı (2026-11-14): 3-A `42532e5`, 3-B `3f6bcb5`, 3-C `2f81667`, 3-D `929a8ec`, 3-E `b201a97`, 3-F `4d05e7c`, 3-G (commit onayı bekliyor). Sıradaki: Faz 4 (task-service + Kanban + outbox) — başlarken adım tablosu sunulup roadmap'e eklenecek.
+Faz 3 (proje) tamamlandı (2026-11-14): 3-A `42532e5`, 3-B `3f6bcb5`, 3-C `2f81667`, 3-D `929a8ec`, 3-E `b201a97`, 3-F `4d05e7c`, 3-G `0e31a27`. Sıradaki: Faz 4 (task-service + Kanban + outbox) — başlarken adım tablosu sunulup roadmap'e eklenecek.
 Faz 3 varsayımları (kullanıcıya sunuldu, itiraz yok): kalıcı silme + outbox Faz 4'te; arşivden geri alma `PUT /projects/{id}` ile `status: ACTIVE`; üye kendi kendine ayrılamaz; dahili uçlar `/internal/projects/...`; davet rozeti sayfa değişiminde + 60 sn'de bir yenilenir.
 Faz 4'e devredilenler: proje kalıcı silme (`?permanent=true` şimdilik 400) + `outbox_events` (V2); üye çıkarılınca task-service'te `assignee_id` boşaltma; `FeignAuthForwardingInterceptor` common-lib'e taşınması; servis JWT'si (outbox relay).
 
