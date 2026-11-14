@@ -28,7 +28,7 @@ frontend/src/app/
 | `/dashboard` | dashboard | AuthGuard |
 | `/projects` | projects (liste: arama, Aktif/Arşiv/Tümü, sayfalama) | AuthGuard |
 | `/projects/new`, `/projects/:id/edit` | projects (form) | AuthGuard |
-| `/projects/:id` | projects (detay + üyeler) | AuthGuard |
+| `/projects/:id` | projects (detay, üyeler, davet gönderme, bekleyen davetler) | AuthGuard |
 | `/invitations` | projects (Davetlerim: kabul/reddet) | AuthGuard |
 | `/projects/:id/board` | tasks (Kanban) | AuthGuard |
 | `/projects/:id/tasks` | tasks (liste, arama/filtre) | AuthGuard |
@@ -60,6 +60,12 @@ Uygulama notları (3-E):
 - Form: oluşturma ve düzenleme aynı bileşen; yetkisiz veya arşivdeki projede form kilitlenir ve nedeni yazılır. Kaydedince listeye döner (3-F'de detay sayfasına dönecek).
 - Ortak `PaginationComponent` (`shared`, 0 tabanlı `page`, `pageChange`): kullanıcı listesi de buna geçti.
 - Şablonlarda mutlak `routerLink` (`/projects/new`): göreli bağlantılar testteki sahte `ActivatedRoute` ile çözülemiyordu.
+
+Uygulama notları (3-F):
+- Proje detayı önce projeyi `get(id, silent=true)` ile ister (erişim yoksa/proje yoksa genel bildirim yerine sayfada açıklama), sonra üyeleri ve — yönetebilene, aktif projede — bekleyen davetleri. Geçersiz id'de istek atılmaz. Her işlemden sonra (başarılı ya da hatalı) sayfa yeniden yüklenir.
+- Üye çıkarma, davet ve davet geri çekme yalnızca `canManage` + aktif projede; OWNER satırında çıkar düğmesi yok. Adı alınamayan kişi "Kullanıcı #id" (`displayName`).
+- `InvitePanelComponent` (OnPush): en az 3 karakter, 300 ms debounce, `switchMap` ile eski arama iptal; sonuçta "Sen" / "Üye" / "Davet bekliyor" / "Davet et". Pasif kullanıcılar `UserService.search` içinde ayıklanır. Davet isteğini üst bileşen yapar; OnPush girdileri (`memberIds`, `pendingInviteeIds`) her yüklemede yeni dizi.
+- Form kaydı ve düzenlemedeki "Vazgeç" detaya döner; liste kartının başlığı detaya bağlantı.
 
 ## Reaktif Yapı (RxJS)
 - Servis tabanlı state: `BehaviorSubject` + `asObservable()`; ağır kütüphane (NgRx) ilk sürümde yok.

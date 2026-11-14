@@ -1,10 +1,11 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 import { Page } from '../models/page.model';
-import { Role, UserDetail } from '../models/user.model';
+import { Role, UserDetail, UserSummary } from '../models/user.model';
 
 export interface ChangePasswordRequest {
   currentPassword: string;
@@ -49,5 +50,16 @@ export class UserService {
 
   adminUpdate(id: number, request: AdminUpdateUserRequest): Observable<UserDetail> {
     return this.http.put<UserDetail>(`${this.usersUrl}/${id}`, request);
+  }
+
+  /**
+   * Davet için kullanıcı arama (ad veya e-posta). USER için en az 3 karakter gerekir (backend kuralı);
+   * pasif kullanıcılar sonuçtan çıkarılır (ADMIN yanıtında da gelebildikleri için).
+   */
+  search(q: string, size = 8): Observable<UserSummary[]> {
+    const params = new HttpParams().set('q', q.trim()).set('page', 0).set('size', size);
+    return this.http
+      .get<Page<UserSummary>>(this.usersUrl, { params })
+      .pipe(map((page) => page.content.filter((user) => user.enabled !== false)));
   }
 }

@@ -1,6 +1,7 @@
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
+import { SKIP_ERROR_TOAST } from '../interceptors/http-context.tokens';
 import { ProjectService } from './project.service';
 
 describe('ProjectService', () => {
@@ -48,5 +49,31 @@ describe('ProjectService', () => {
     const req = http.expectOne('/api/projects/7');
     expect(req.request.method).toBe('DELETE');
     req.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('detay sessiz istenirse genel hata bildirimi kapatılır', () => {
+    service.get(7, true).subscribe();
+    const req = http.expectOne('/api/projects/7');
+    expect(req.request.context.get(SKIP_ERROR_TOAST)).toBeTrue();
+    req.flush({});
+  });
+
+  it('üye ve davet uçları', () => {
+    service.members(7).subscribe();
+    http.expectOne('/api/projects/7/members').flush([]);
+
+    service.removeMember(7, 3).subscribe();
+    expect(http.expectOne('/api/projects/7/members/3').request.method).toBe('DELETE');
+
+    service.invitations(7, 'PENDING').subscribe();
+    http.expectOne('/api/projects/7/invitations?status=PENDING').flush([]);
+
+    service.invite(7, 9).subscribe();
+    const invite = http.expectOne('/api/projects/7/invitations');
+    expect(invite.request.method).toBe('POST');
+    expect(invite.request.body).toEqual({ userId: 9 });
+
+    service.cancelInvitation(7, 50).subscribe();
+    expect(http.expectOne('/api/projects/7/invitations/50').request.method).toBe('DELETE');
   });
 });

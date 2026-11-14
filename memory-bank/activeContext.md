@@ -1,7 +1,7 @@
 # Active Context
 
 ## Şu anki odak
-Faz 3 (proje) başladı; adım tablosu docs/10'da (3-A..3-G). 3-A (`42532e5`), 3-B (`3f6bcb5`), 3-C (`2f81667`), 3-D (`929a8ec`) ve 3-E tamam (3-E commit onayı bekliyor). Sıradaki: 3-F (proje detayı + üyeler + davet gönderme; form kaydından sonra detaya dönüş, kart başlığı detaya bağlantı).
+Faz 3 (proje) başladı; adım tablosu docs/10'da (3-A..3-G). 3-A (`42532e5`), 3-B (`3f6bcb5`), 3-C (`2f81667`), 3-D (`929a8ec`), 3-E (`b201a97`) ve 3-F tamam (3-F commit onayı bekliyor). Sıradaki: 3-G ("Davetlerim" sayfası kabul/red, navbar'da bekleyen davet rozeti — sayfa değişiminde + 60 sn'de bir, faz bitiş kriterlerinin tarayıcıda kontrolü). `Invitation` modeli `project.model.ts`'de hazır.
 Faz 3 varsayımları (kullanıcıya sunuldu, itiraz yok): kalıcı silme + outbox Faz 4'te; arşivden geri alma `PUT /projects/{id}` ile `status: ACTIVE`; üye kendi kendine ayrılamaz; dahili uçlar `/internal/projects/...`; davet rozeti sayfa değişiminde + 60 sn'de bir yenilenir.
 
 ## project-service (3-A) notları
@@ -17,7 +17,8 @@ Faz 3 varsayımları (kullanıcıya sunuldu, itiraz yok): kalıcı silme + outbo
 
 ## Frontend (3-E) notları
 - Tarayıcı testi: scratchpad `e2e-lib-head.txt` (ortak başlık: Chrome/CDP yardımcıları, login, logoutViaNavbar) + adım gövdesi → `e2e-3e.js`. Bash heredoc'ta tırnaklı JS bozuluyor: gövdeyi Write ile yaz, `cat` ile birleştir.
-- 123 frontend birim testi.
+- 3-F: `e2e-3f.js` başka kullanıcı adına işlemleri Node'dan doğrudan gateway'e (`http://localhost:8080/api`) yapar; tarayıcı cookie'si bozulmaz. Sayfa yenilenince `window.confirm` geçersiz kılması sıfırlanır, yeniden ayarla (yoksa headless'ta gerçek onay penceresi akışı kilitler).
+- 138 frontend birim testi.
 
 ## Frontend (2-G) notları
 - Route yapısı: korumalı sayfalar `MainLayoutComponent` çocukları (`dashboard`, `profile`, `admin/users`), her lazy çocukta `canLoad`. Layout çocuklarında `''` yollu lazy modül kullanma (girişsiz `/login` eşleşmesinde canLoad yanlış yönlendirir). 404 en sonda, layout dışında.

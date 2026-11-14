@@ -41,3 +41,37 @@ export interface ProjectQuery {
   page: number;
   size: number;
 }
+
+/** `GET /api/projects/{id}/members`: önce OWNER. auth-service'e ulaşılamazsa ad/e-posta/enabled null. */
+export interface ProjectMember {
+  userId: number;
+  email: string | null;
+  fullName: string | null;
+  enabled: boolean | null;
+  role: MemberRole;
+  joinedAt: string;
+}
+
+export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
+
+/** Davetteki kişi; auth-service'e ulaşılamazsa ad/e-posta null. */
+export interface InvitationPerson {
+  id: number;
+  fullName: string | null;
+  email: string | null;
+}
+
+export interface Invitation {
+  id: number;
+  status: InvitationStatus;
+  createdAt: string;
+  respondedAt: string | null;
+  project: { id: number; name: string };
+  inviter: InvitationPerson;
+  invitee: InvitationPerson;
+}
+
+/** Adı bilinmeyen kişi için gösterim adı. */
+export function displayName(person: { fullName: string | null }, id: number): string {
+  return person.fullName ?? `Kullanıcı #${id}`;
+}

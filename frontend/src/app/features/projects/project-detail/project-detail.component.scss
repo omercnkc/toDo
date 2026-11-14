@@ -1,0 +1,6 @@
+// Açıklamadaki satır sonları korunur, uzun kelimeler taşmaz
+.description {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  max-width: 60rem;
+}

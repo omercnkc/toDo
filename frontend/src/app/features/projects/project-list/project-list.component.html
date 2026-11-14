@@ -74,7 +74,9 @@
       <article class="card shadow-sm border-0 h-100" [class.archived]="project.status === 'ARCHIVED'">
         <div class="card-body d-flex flex-column">
           <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
-            <h2 class="h5 mb-0 text-break">{{ project.name }}</h2>
+            <h2 class="h5 mb-0 text-break">
+              <a [routerLink]="['/projects', project.id]" class="stretched-link-title">{{ project.name }}</a>
+            </h2>
             <span *ngIf="project.status === 'ARCHIVED'" class="badge bg-secondary flex-shrink-0">Arşivde</span>
           </div>
           <p class="description text-muted small mb-3">

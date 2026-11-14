@@ -1,0 +1,50 @@
+<label for="invite-search" class="form-label">Kullanıcı ara</label>
+<input
+  id="invite-search"
+  type="search"
+  class="form-control"
+  placeholder="Ad veya e-posta"
+  [formControl]="search"
+  autocomplete="off"
+  aria-describedby="invite-search-hint"
+/>
+<div id="invite-search-hint" class="form-text">
+  Davet edilen kişi kabul edince projeye üye olur. En az {{ minLength }} karakter yaz.
+</div>
+
+<div class="mt-3" aria-live="polite">
+  <p *ngIf="state === 'tooShort'" class="small text-muted mb-0">Aramak için en az {{ minLength }} karakter yaz.</p>
+  <p *ngIf="state === 'loading'" class="small text-muted mb-0">
+    <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Aranıyor…
+  </p>
+  <p *ngIf="state === 'error'" class="small text-danger mb-0">Arama yapılamadı. Lütfen tekrar deneyin.</p>
+  <p *ngIf="state === 'done' && results.length === 0" class="small text-muted mb-0">Eşleşen kullanıcı yok.</p>
+
+  <ul *ngIf="state === 'done' && results.length > 0" class="list-group">
+    <li
+      *ngFor="let user of results; trackBy: trackById"
+      class="list-group-item d-flex align-items-center gap-3"
+    >
+      <app-avatar [name]="user.fullName" size="sm"></app-avatar>
+      <div class="flex-grow-1 min-w-0">
+        <div class="fw-semibold text-truncate">{{ user.fullName }}</div>
+        <div class="small text-muted text-truncate">{{ user.email }}</div>
+      </div>
+      <ng-container [ngSwitch]="status(user)">
+        <span *ngSwitchCase="'self'" class="badge bg-light text-dark border">Sen</span>
+        <span *ngSwitchCase="'member'" class="badge bg-light text-dark border">Üye</span>
+        <span *ngSwitchCase="'pending'" class="badge bg-warning text-dark">Davet bekliyor</span>
+        <button
+          *ngSwitchDefault
+          type="button"
+          class="btn btn-sm btn-primary flex-shrink-0"
+          [disabled]="invitingUserId === user.id"
+          (click)="invite.emit(user)"
+          [attr.aria-label]="'Davet et: ' + user.fullName"
+        >
+          {{ invitingUserId === user.id ? 'Gönderiliyor…' : 'Davet et' }}
+        </button>
+      </ng-container>
+    </li>
+  </ul>
+</div>

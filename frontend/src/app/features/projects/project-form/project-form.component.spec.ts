@@ -70,7 +70,7 @@ describe('ProjectFormComponent', () => {
 
       expect(projects.create).toHaveBeenCalledWith({ name: 'Web', description: null });
       expect(toast.success).toHaveBeenCalledWith('"Web" oluşturuldu.');
-      expect(router.navigate).toHaveBeenCalledWith(['/projects']);
+      expect(router.navigate).toHaveBeenCalledWith(['/projects', 7]);
     });
 
     it('açıklama sayacı ve sınır', () => {
@@ -113,6 +113,7 @@ describe('ProjectFormComponent', () => {
 
       expect(projects.update).toHaveBeenCalledWith(7, { name: 'Web 2', description: 'Site' });
       expect(toast.success).toHaveBeenCalledWith('Proje güncellendi.');
+      expect(router.navigate).toHaveBeenCalledWith(['/projects', 7]);
     });
 
     it('yetkisi yoksa veya arşivdeyse form kilitlenir', async () => {

@@ -1,5 +1,5 @@
 <nav aria-label="Konum" class="mb-2">
-  <a routerLink="/projects" class="small text-decoration-none">‹ Projeler</a>
+  <a [routerLink]="backLink" class="small text-decoration-none">‹ {{ isEdit ? (project?.name ?? 'Proje') : 'Projeler' }}</a>
 </nav>
 <h1 class="h3 mb-4">{{ isEdit ? 'Projeyi düzenle' : 'Yeni proje' }}</h1>
 
@@ -63,7 +63,7 @@
           <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
           {{ submitting ? 'Kaydediliyor…' : isEdit ? 'Kaydet' : 'Projeyi oluştur' }}
         </button>
-        <a routerLink="/projects" class="btn btn-outline-secondary">Vazgeç</a>
+        <a [routerLink]="backLink" class="btn btn-outline-secondary">Vazgeç</a>
       </div>
     </form>
   </div>

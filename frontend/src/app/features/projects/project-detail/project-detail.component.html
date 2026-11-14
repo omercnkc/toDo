@@ -1,0 +1,162 @@
+<nav aria-label="Konum" class="mb-2">
+  <a routerLink="/projects" class="small text-decoration-none">‹ Projeler</a>
+</nav>
+
+<div *ngIf="loading" class="d-flex align-items-center gap-2 text-muted" role="status">
+  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+  Proje yükleniyor…
+</div>
+
+<!-- Hata durumları -->
+<div *ngIf="error" class="card shadow-sm border-0">
+  <div class="card-body p-5 text-center" [ngSwitch]="error">
+    <ng-container *ngSwitchCase="'notFound'">
+      <h1 class="h5">Proje bulunamadı</h1>
+      <p class="text-muted">Proje silinmiş ya da adres hatalı olabilir.</p>
+    </ng-container>
+    <ng-container *ngSwitchCase="'forbidden'">
+      <h1 class="h5">Bu projeye erişimin yok</h1>
+      <p class="text-muted">Projeyi yalnızca üyeleri görebilir. Projeden çıkarılmış olabilirsin.</p>
+    </ng-container>
+    <ng-container *ngSwitchDefault>
+      <h1 class="h5">Proje yüklenemedi</h1>
+      <p class="text-muted">Bağlantını kontrol edip tekrar dene.</p>
+      <button type="button" class="btn btn-outline-secondary me-2" (click)="retry()">Tekrar dene</button>
+    </ng-container>
+    <a routerLink="/projects" class="btn btn-primary">Projelerime dön</a>
+  </div>
+</div>
+
+<ng-container *ngIf="project && !error">
+  <!-- Başlık -->
+  <header class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+    <div class="min-w-0">
+      <h1 class="h3 mb-2 text-break">{{ project.name }}</h1>
+      <div class="d-flex flex-wrap align-items-center gap-2 small text-muted">
+        <span class="badge" [ngClass]="project.myRole === 'OWNER' ? 'bg-primary' : 'bg-light text-dark border'">
+          {{ roleLabel(project) }}
+        </span>
+        <span *ngIf="project.status === 'ARCHIVED'" class="badge bg-secondary">Arşivde</span>
+        <span>{{ project.memberCount }} üye</span>
+        <span aria-hidden="true">·</span>
+        <span>Oluşturuldu {{ project.createdAt | date: 'dd.MM.yyyy' }}</span>
+      </div>
+    </div>
+    <div *ngIf="project.canManage" class="d-flex flex-wrap gap-2">
+      <ng-container *ngIf="project.status === 'ACTIVE'; else archivedActions">
+        <a [routerLink]="['/projects', project.id, 'edit']" class="btn btn-outline-primary">Düzenle</a>
+        <button type="button" class="btn btn-outline-secondary" [disabled]="busy.archive" (click)="archive()">
+          Arşivle
+        </button>
+      </ng-container>
+      <ng-template #archivedActions>
+        <button type="button" class="btn btn-success" [disabled]="busy.archive" (click)="restore()">
+          Arşivden çıkar
+        </button>
+      </ng-template>
+    </div>
+  </header>
+
+  <div *ngIf="project.status === 'ARCHIVED'" class="alert alert-secondary" role="status">
+    Bu proje arşivde. Üyelik ve davetler değiştirilemez<ng-container *ngIf="project.canManage">; değiştirmek için
+    arşivden çıkar</ng-container>.
+  </div>
+
+  <p class="description mb-4" [class.text-muted]="!project.description">
+    {{ project.description || 'Açıklama eklenmemiş.' }}
+  </p>
+
+  <div class="row g-4">
+    <!-- Üyeler -->
+    <div class="col-12" [class.col-lg-7]="canChangeMembership">
+      <section class="card shadow-sm border-0" aria-labelledby="members-heading">
+        <div class="card-body p-4">
+          <h2 id="members-heading" class="h5 mb-3">Üyeler</h2>
+          <div *ngIf="membersFailed" class="alert alert-warning py-2 small" role="alert">Üyeler yüklenemedi.</div>
+          <ul class="list-group list-group-flush">
+            <li
+              *ngFor="let member of members; trackBy: trackMember"
+              class="list-group-item px-0 d-flex align-items-center gap-3"
+            >
+              <app-avatar [name]="member.fullName ?? '?'" size="md"></app-avatar>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-truncate">
+                  {{ displayName(member, member.userId) }}
+                  <span *ngIf="member.userId === currentUserId" class="badge bg-light text-dark border ms-1">Sen</span>
+                </div>
+                <div class="small text-muted text-truncate">
+                  {{ member.email ?? 'E-posta bilgisi alınamadı' }}
+                </div>
+              </div>
+              <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 flex-shrink-0">
+                <span *ngIf="member.enabled === false" class="badge bg-danger">Pasif</span>
+                <span class="badge" [ngClass]="member.role === 'OWNER' ? 'bg-primary' : 'bg-light text-dark border'">
+                  {{ member.role === 'OWNER' ? 'Sahibi' : 'Üye' }}
+                </span>
+                <button
+                  *ngIf="canChangeMembership && member.role !== 'OWNER'"
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  [disabled]="busy.removingUserId === member.userId"
+                  (click)="removeMember(member)"
+                  [attr.aria-label]="'Projeden çıkar: ' + displayName(member, member.userId)"
+                >
+                  Çıkar
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <!-- Davet (yalnızca yönetebilene, aktif projede) -->
+    <div *ngIf="canChangeMembership" class="col-12 col-lg-5 d-flex flex-column gap-4">
+      <section class="card shadow-sm border-0" aria-labelledby="invite-heading">
+        <div class="card-body p-4">
+          <h2 id="invite-heading" class="h5 mb-3">Üye davet et</h2>
+          <app-invite-panel
+            [memberIds]="memberIds"
+            [pendingInviteeIds]="pendingInviteeIds"
+            [currentUserId]="currentUserId"
+            [invitingUserId]="busy.invitingUserId"
+            (invite)="invite($event)"
+          ></app-invite-panel>
+        </div>
+      </section>
+
+      <section class="card shadow-sm border-0" aria-labelledby="pending-heading">
+        <div class="card-body p-4">
+          <h2 id="pending-heading" class="h5 mb-3">
+            Bekleyen davetler
+            <span class="badge bg-light text-dark border ms-1">{{ pendingInvitations.length }}</span>
+          </h2>
+          <p *ngIf="pendingInvitations.length === 0" class="small text-muted mb-0">Bekleyen davet yok.</p>
+          <ul *ngIf="pendingInvitations.length > 0" class="list-group list-group-flush">
+            <li
+              *ngFor="let invitation of pendingInvitations; trackBy: trackInvitation"
+              class="list-group-item px-0 d-flex align-items-center gap-3"
+            >
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-truncate">{{ displayName(invitation.invitee, invitation.invitee.id) }}</div>
+                <div class="small text-muted text-truncate">
+                  {{ invitation.createdAt | date: 'dd.MM.yyyy HH:mm' }} ·
+                  {{ displayName(invitation.inviter, invitation.inviter.id) }} gönderdi
+                </div>
+              </div>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                [disabled]="busy.cancellingId === invitation.id"
+                (click)="cancelInvitation(invitation)"
+                [attr.aria-label]="'Daveti geri çek: ' + displayName(invitation.invitee, invitation.invitee.id)"
+              >
+                Geri çek
+              </button>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+</ng-container>

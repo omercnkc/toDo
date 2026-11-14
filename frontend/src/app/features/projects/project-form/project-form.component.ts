@@ -58,6 +58,11 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
     return this.projectId !== null;
   }
 
+  /** Vazgeç/geri: düzenlemede projeye, oluşturmada listeye. */
+  get backLink(): (string | number)[] {
+    return this.isEdit ? ['/projects', this.projectId as number] : ['/projects'];
+  }
+
   ngOnInit(): void {
     if (this.isEdit) {
       this.load();
@@ -127,7 +132,7 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
         next: (project) => {
           this.form.markAsPristine();
           this.toast.success(this.isEdit ? 'Proje güncellendi.' : `"${project.name}" oluşturuldu.`);
-          void this.router.navigate(['/projects']);
+          void this.router.navigate(['/projects', project.id]);
         },
         error: (error: unknown) => this.handleError(error),
       });
