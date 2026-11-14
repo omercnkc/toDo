@@ -1,7 +1,7 @@
 # Active Context
 
 ## Şu anki odak
-Faz 2 (kimlik) tamamlandı (2026-11-14): 2-A..2-G. 2-G commit'i kullanıcı onayı bekliyor. Sıradaki: Faz 3 (project-service + davet akışı + proje ekranları) — başlarken adım tablosu sunulup roadmap'e eklenecek.
+Faz 2 (kimlik) tamamlandı (2026-11-14): 2-A..2-G. Tüm Faz 2 commit'leri push edildi. Sıradaki: Faz 3 (project-service + davet akışı + proje ekranları) — başlarken adım tablosu sunulup roadmap'e eklenecek.
 
 ## Frontend (2-G) notları
 - Route yapısı: korumalı sayfalar `MainLayoutComponent` çocukları (`dashboard`, `profile`, `admin/users`), her lazy çocukta `canLoad`. Layout çocuklarında `''` yollu lazy modül kullanma (girişsiz `/login` eşleşmesinde canLoad yanlış yönlendirir). 404 en sonda, layout dışında.
