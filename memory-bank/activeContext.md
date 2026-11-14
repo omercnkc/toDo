@@ -1,7 +1,7 @@
 # Active Context
 
 ## Şu anki odak
-Faz 3 (proje) başladı; adım tablosu docs/10'da (3-A..3-G). 3-A (`42532e5`), 3-B (`3f6bcb5`) ve 3-C tamam (3-C commit onayı bekliyor). Sıradaki: 3-D (davet akışı backend).
+Faz 3 (proje) başladı; adım tablosu docs/10'da (3-A..3-G). 3-A (`42532e5`), 3-B (`3f6bcb5`), 3-C (`2f81667`) ve 3-D tamam (3-D commit onayı bekliyor). Backend tarafı Faz 3 için bitti. Sıradaki: 3-E (frontend proje listesi + form).
 Faz 3 varsayımları (kullanıcıya sunuldu, itiraz yok): kalıcı silme + outbox Faz 4'te; arşivden geri alma `PUT /projects/{id}` ile `status: ACTIVE`; üye kendi kendine ayrılamaz; dahili uçlar `/internal/projects/...`; davet rozeti sayfa değişiminde + 60 sn'de bir yenilenir.
 
 ## project-service (3-A) notları
@@ -12,6 +12,7 @@ Faz 3 varsayımları (kullanıcıya sunuldu, itiraz yok): kalıcı silme + outbo
 - Test tuzakları: yalnız `-pl project-service` ile çalıştırınca common-lib eski jar'dan gelir → `-am` kullan. MockMvc URL şablonunda `%25` yeniden kodlanır → `.param()` kullan. Entegrasyon testleri aynı DB'yi paylaşır → her testte benzersiz kullanıcı id'leri.
 - 3-C: `client/` paketi: `AuthClient` (Feign, `/internal/users`), `FeignAuthForwardingInterceptor` (Authorization iletir; task/dashboard da gerekince common-lib'e taşınacak), `UserDirectory` (find → Optional, lookup → Map, hatalar 503 `USER_SERVICE_UNAVAILABLE`). Üye listesi auth kapalıyken adsız döner (degrade). 3-D davet gönderirken `UserDirectory.find` kullanılacak (yok → 404, pasif → 400/409).
 - Testler: `IntegrationTestSupport` (tek context, `@MockBean AuthClient`, owner/member/stranger/admin, `createProject`, `addMember`). Mock'u yeniden stub'larken `doReturn/doThrow` kullan (`when(...)` önceki cevabı null argümanla çağırır).
+- 3-D: `InvitationService` uzak çağrıyı transaction dışında yapar, DB işleri `TransactionTemplate` ile; kurallar `checkInviteRules` içinde (kayıttan önce tekrar). `findForUpdate` (PESSIMISTIC_WRITE + join fetch project). Zamanlar `truncatedTo(MICROS)` (DATETIME(6) ile aynı). `UserDirectory.lookupBestEffort` liste ekranlarında (auth kapalıyken adsız).
 - Compose'ta `project-service` (8082, port yayınlanmaz). Gateway route'ları (`/api/projects/**`, `/api/invitations/**`) Faz 1'den beri hazırdı.
 
 ## Frontend (2-G) notları

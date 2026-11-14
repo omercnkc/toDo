@@ -40,7 +40,8 @@ public class MemberService {
     public List<MemberResponse> list(AuthenticatedUser user, long projectId) {
         access.requireMember(projectId, user);
         List<ProjectMember> projectMembers = members.findByProjectIdOrderByRoleDescJoinedAtAsc(projectId);
-        Map<Long, UserSummary> summaries = lookupOrEmpty(projectMembers);
+        Map<Long, UserSummary> summaries =
+                users.lookupBestEffort(projectMembers.stream().map(ProjectMember::getUserId).toList());
         return projectMembers.stream()
                 .map(m -> MemberResponse.from(m, summaries.get(m.getUserId())))
                 .toList();
@@ -63,17 +64,5 @@ public class MemberService {
         }
         members.delete(member);
         log.info("Kullanıcı {} proje {}'den üye {}'i çıkardı", user.id(), projectId, memberUserId);
-    }
-
-    private Map<Long, UserSummary> lookupOrEmpty(List<ProjectMember> projectMembers) {
-        if (projectMembers.isEmpty()) {
-            return Map.of();
-        }
-        try {
-            return users.lookup(projectMembers.stream().map(ProjectMember::getUserId).toList());
-        } catch (ApiException e) {
-            log.warn("Üye adları alınamadı, liste adsız dönüyor: {}", e.getMessage());
-            return Map.of();
-        }
     }
 }

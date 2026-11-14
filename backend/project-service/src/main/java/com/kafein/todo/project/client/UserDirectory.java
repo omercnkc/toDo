@@ -62,6 +62,22 @@ public class UserDirectory {
         return result;
     }
 
+    /**
+     * {@link #lookup} gibi, ama auth-service'e ulaşılamazsa hata yerine boş harita döner. Ad/e-postanın
+     * yalnızca gösterim için olduğu listelerde kullanılır: bir servisin kesintisi tüm ekranı düşürmesin.
+     */
+    public Map<Long, UserSummary> lookupBestEffort(Collection<Long> userIds) {
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        try {
+            return lookup(userIds);
+        } catch (ApiException e) {
+            log.warn("Kullanıcı adları alınamadı, adsız devam ediliyor: {}", e.getMessage());
+            return Map.of();
+        }
+    }
+
     private static ApiException unavailable(FeignException e) {
         log.warn("auth-service çağrısı başarısız (HTTP {}): {}", e.status(), e.getMessage());
         return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "USER_SERVICE_UNAVAILABLE",

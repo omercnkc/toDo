@@ -94,11 +94,12 @@ Proje uçları uygulama notları (3-B):
 - Dahili uçlar (gateway'den erişilemez; geçerli bir kullanıcı token'ı yeterli): `GET /internal/projects/{id}/members/{userId}` → `{projectId, userId, role, projectStatus}` veya 404 `MEMBERSHIP_NOT_FOUND`; `GET /internal/projects/accessible?userId=` → proje id listesi.
 - auth-service çağrıları hata verirse (davet gönderme gibi adın zorunlu olduğu yerlerde) 503 `USER_SERVICE_UNAVAILABLE`. Feign zaman aşımları: bağlantı 2 sn, okuma 5 sn.
 
-Davet yanıtı:
+Davet yanıtı (3-D'de `respondedAt`, `invitee` ve kişilerde `email` eklendi):
 ```json
-{ "id": 7, "status": "PENDING", "createdAt": "2026-11-11T10:00:00Z",
+{ "id": 7, "status": "PENDING", "createdAt": "2026-11-11T10:00:00Z", "respondedAt": null,
   "project": { "id": 2, "name": "Web Sitesi" },
-  "inviter": { "id": 1, "fullName": "Ali Veli" } }
+  "inviter": { "id": 1, "fullName": "Ali Veli", "email": "ali@ornek.com" },
+  "invitee": { "id": 5, "fullName": "Can Demir", "email": "can@ornek.com" } }
 ```
 Davet kuralları (ihlalde hata kodu):
 - Kendini, mevcut üyeyi veya `enabled=false` kullanıcıyı davet edemezsin → 400/409.
@@ -107,6 +108,13 @@ Davet kuralları (ihlalde hata kodu):
 - Bir projede en fazla 50 bekleyen davet olabilir → 409.
 - Davet edilen dışında kimse kabul/red yapamaz → 403. Zaten yanıtlanmış daveti tekrar yanıtlamak → 409.
 - Arşivlenmiş projeye davet gönderilemez/kabul edilemez → 409.
+
+Davet uçları uygulama notları (3-D):
+- Hata kodları: `CANNOT_INVITE_SELF` 400, `USER_DISABLED` 400, `USER_NOT_FOUND` 404, `ALREADY_MEMBER` 409, `INVITATION_ALREADY_PENDING` 409, `INVITATION_RECENTLY_REJECTED` 409, `TOO_MANY_PENDING_INVITATIONS` 409, `PROJECT_ARCHIVED` 409, `INVITATION_FORBIDDEN` 403 (başkasının daveti; ADMIN dahil), `INVITATION_NOT_PENDING` 409, `INVITATION_NOT_FOUND` 404, auth-service kesintisinde `USER_SERVICE_UNAVAILABLE` 503.
+- Kabul ve red 200 + güncel davet döner; iptal 204. 24 saat kuralı yalnızca **red** için; iptal edilen kişi hemen yeniden davet edilebilir.
+- Arşivlenmiş projenin bekleyen daveti kabul edilemez ama reddedilebilir ve proje arşivden çıkınca kabul edilebilir.
+- `GET /api/invitations` varsayılan `status=PENDING`; `GET /api/projects/{id}/invitations` `status` boşsa hepsi. İkisi de yeni önce, en fazla 200 kayıt.
+- Eşzamanlılık: aynı kişiye aynı anda iki davet → biri 201, diğeri 409 (unique `pending_flag`); kabul/red/iptal davet satırını kilitler (`FOR UPDATE`).
 
 ## task-service
 | Metot | Yol | Yetki | Açıklama |
