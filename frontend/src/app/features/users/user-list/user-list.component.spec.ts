@@ -160,9 +160,10 @@ describe('UserListComponent', () => {
     queryParams$.next(convertToParamMap({ page: '5' }));
     fixture.detectChanges();
 
-    // 10 sayfa, geçerli 5. (index 4): 1 … 4 5 6 … 10
-    expect(component.pages).toEqual([0, null, 3, 4, 5, null, 9]);
-    component.goToPage(5);
+    // 10 sayfa, geçerli 5. (index 4): ortak sayfalama bileşeni çizilir, tıklama URL'ye yazılır
+    const pageSix = Array.from(el().querySelectorAll<HTMLButtonElement>('app-pagination button'))
+      .find((b) => b.textContent?.trim() === '6')!;
+    pageSix.click();
     expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { q: null, page: 6 } }));
   });
 

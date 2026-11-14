@@ -25,6 +25,16 @@
             >Panel</a
           >
         </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            routerLink="/projects"
+            routerLinkActive="active"
+            #projectsLink="routerLinkActive"
+            [attr.aria-current]="projectsLink.isActive ? 'page' : null"
+            >Projeler</a
+          >
+        </li>
         <li *ngIf="(user$ | async)?.role === 'ADMIN'" class="nav-item">
           <a
             class="nav-link"

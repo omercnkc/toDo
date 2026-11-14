@@ -1,0 +1,133 @@
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h1 class="h3 mb-1">Projeler</h1>
+    <p class="text-muted mb-0" aria-live="polite">
+      <ng-container *ngIf="result">{{ result.totalElements }} proje</ng-container>
+    </p>
+  </div>
+  <a routerLink="/projects/new" class="btn btn-primary">Yeni proje</a>
+</div>
+
+<div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+  <div class="search-box">
+    <label for="project-search" class="visually-hidden">Proje adında ara</label>
+    <input
+      id="project-search"
+      type="search"
+      class="form-control"
+      placeholder="Proje adında ara"
+      [formControl]="search"
+      autocomplete="off"
+    />
+  </div>
+  <div class="btn-group" role="group" aria-label="Duruma göre filtrele">
+    <ng-container *ngFor="let option of statusOptions">
+      <input
+        type="radio"
+        class="btn-check"
+        name="project-status"
+        [id]="'status-' + option.value"
+        [checked]="query.status === option.value"
+        (change)="setStatus(option.value)"
+      />
+      <label class="btn btn-outline-secondary" [for]="'status-' + option.value">{{ option.label }}</label>
+    </ng-container>
+  </div>
+</div>
+
+<div *ngIf="loadFailed" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="alert">
+  <span>Projeler yüklenemedi.</span>
+  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="retry()">Tekrar dene</button>
+</div>
+
+<div *ngIf="loading && !result" class="d-flex align-items-center gap-2 text-muted" role="status">
+  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+  Yükleniyor…
+</div>
+
+<ng-container *ngIf="result">
+  <!-- Boş durumlar -->
+  <div *ngIf="isFirstRun" class="card shadow-sm border-0">
+    <div class="card-body p-5 text-center">
+      <h2 class="h5">Henüz bir projen yok</h2>
+      <p class="text-muted mb-4">Bir proje oluştur, ekibini davet et ve görevleri birlikte takip edin.</p>
+      <a routerLink="/projects/new" class="btn btn-primary">İlk projeni oluştur</a>
+    </div>
+  </div>
+  <div *ngIf="result.content.length === 0 && !isFirstRun" class="card shadow-sm border-0">
+    <div class="card-body p-5 text-center text-muted">
+      <ng-container *ngIf="query.q; else noFilterMatch">“{{ query.q }}” ile eşleşen proje yok.</ng-container>
+      <ng-template #noFilterMatch>
+        {{ query.status === 'ARCHIVED' ? 'Arşivlenmiş proje yok.' : 'Proje yok.' }}
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- Kartlar -->
+  <div
+    *ngIf="result.content.length > 0"
+    class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3"
+    [class.opacity-50]="loading"
+    [attr.aria-busy]="loading"
+  >
+    <div *ngFor="let project of result.content; trackBy: trackById" class="col">
+      <article class="card shadow-sm border-0 h-100" [class.archived]="project.status === 'ARCHIVED'">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+            <h2 class="h5 mb-0 text-break">{{ project.name }}</h2>
+            <span *ngIf="project.status === 'ARCHIVED'" class="badge bg-secondary flex-shrink-0">Arşivde</span>
+          </div>
+          <p class="description text-muted small mb-3">
+            {{ project.description || 'Açıklama yok.' }}
+          </p>
+          <div class="mt-auto d-flex flex-wrap align-items-center gap-2 small text-muted">
+            <span class="badge" [ngClass]="project.myRole === 'OWNER' ? 'bg-primary' : 'bg-light text-dark border'">
+              {{ roleLabel(project) }}
+            </span>
+            <span>{{ project.memberCount }} üye</span>
+            <span aria-hidden="true">·</span>
+            <span>Güncellendi {{ project.updatedAt | date: 'dd.MM.yyyy' }}</span>
+          </div>
+        </div>
+        <div *ngIf="project.canManage" class="card-footer bg-transparent border-0 pt-0 pb-3 px-3 d-flex gap-2">
+          <ng-container *ngIf="project.status === 'ACTIVE'; else archivedActions">
+            <a
+              [routerLink]="['/projects', project.id, 'edit']"
+              class="btn btn-sm btn-outline-primary"
+              [attr.aria-label]="'Düzenle: ' + project.name"
+              >Düzenle</a
+            >
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary"
+              [disabled]="pendingId === project.id"
+              (click)="archive(project)"
+              [attr.aria-label]="'Arşivle: ' + project.name"
+            >
+              Arşivle
+            </button>
+          </ng-container>
+          <ng-template #archivedActions>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-success"
+              [disabled]="pendingId === project.id"
+              (click)="restore(project)"
+              [attr.aria-label]="'Arşivden çıkar: ' + project.name"
+            >
+              Arşivden çıkar
+            </button>
+          </ng-template>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <app-pagination
+    class="d-block mt-4"
+    [page]="query.page"
+    [totalPages]="result.totalPages"
+    label="Proje sayfaları"
+    (pageChange)="goToPage($event)"
+  ></app-pagination>
+</ng-container>

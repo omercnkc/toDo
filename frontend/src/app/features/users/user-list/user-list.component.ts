@@ -101,25 +101,9 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.reload$.next();
   }
 
+  /** Geçerlilik kontrolünü PaginationComponent yapar. */
   goToPage(page: number): void {
-    if (this.result && page >= 0 && page < this.result.totalPages && page !== this.query.page) {
-      this.navigate({ ...this.query, page }, false);
-    }
-  }
-
-  /** Sayfa düğmeleri: ilk, son ve geçerli sayfanın çevresi; aralar `null` (…). */
-  get pages(): (number | null)[] {
-    const total = this.result?.totalPages ?? 0;
-    const current = this.query.page;
-    const pages: (number | null)[] = [];
-    for (let i = 0; i < total; i++) {
-      if (i === 0 || i === total - 1 || Math.abs(i - current) <= 1) {
-        pages.push(i);
-      } else if (pages[pages.length - 1] !== null) {
-        pages.push(null);
-      }
-    }
-    return pages;
+    this.navigate({ ...this.query, page }, false);
   }
 
   isSelf(user: UserDetail): boolean {

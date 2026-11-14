@@ -1,0 +1,70 @@
+<nav aria-label="Konum" class="mb-2">
+  <a routerLink="/projects" class="small text-decoration-none">‹ Projeler</a>
+</nav>
+<h1 class="h3 mb-4">{{ isEdit ? 'Projeyi düzenle' : 'Yeni proje' }}</h1>
+
+<div *ngIf="loading" class="d-flex align-items-center gap-2 text-muted" role="status">
+  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+  Proje yükleniyor…
+</div>
+
+<div *ngIf="loadFailed && !loading" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="alert">
+  <span>Proje yüklenemedi.</span>
+  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="load()">Tekrar dene</button>
+</div>
+
+<section *ngIf="!isEdit || project" class="card shadow-sm border-0 form-card">
+  <div class="card-body p-4">
+    <div *ngIf="lockedReason" class="alert alert-info" role="status">{{ lockedReason }}</div>
+    <div *ngIf="formError" class="alert alert-danger" role="alert">{{ formError }}</div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="mb-3">
+        <label for="project-name" class="form-label">Proje adı</label>
+        <input
+          id="project-name"
+          type="text"
+          class="form-control"
+          formControlName="name"
+          autocomplete="off"
+          [attr.maxlength]="nameMax"
+          [class.is-invalid]="isInvalid('name')"
+          [attr.aria-invalid]="isInvalid('name')"
+          aria-describedby="project-name-error"
+        />
+        <app-field-error [control]="control('name')" errorId="project-name-error"></app-field-error>
+      </div>
+
+      <div class="mb-4">
+        <label for="project-description" class="form-label">
+          Açıklama <span class="text-muted fw-normal">(isteğe bağlı)</span>
+        </label>
+        <textarea
+          id="project-description"
+          class="form-control"
+          rows="5"
+          formControlName="description"
+          [class.is-invalid]="isInvalid('description')"
+          [attr.aria-invalid]="isInvalid('description')"
+          aria-describedby="project-description-hint project-description-error"
+        ></textarea>
+        <app-field-error [control]="control('description')" errorId="project-description-error"></app-field-error>
+        <div
+          id="project-description-hint"
+          class="form-text text-end"
+          [class.text-danger]="descriptionLength > descriptionMax"
+        >
+          {{ descriptionLength }} / {{ descriptionMax }}
+        </div>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary" [disabled]="submitting || !!lockedReason">
+          <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          {{ submitting ? 'Kaydediliyor…' : isEdit ? 'Kaydet' : 'Projeyi oluştur' }}
+        </button>
+        <a routerLink="/projects" class="btn btn-outline-secondary">Vazgeç</a>
+      </div>
+    </form>
+  </div>
+</section>

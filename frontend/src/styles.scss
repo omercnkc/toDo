@@ -15,3 +15,8 @@ body {
 .min-w-0 {
   min-width: 0;
 }
+
+// Tek sütunlu form sayfaları çok geniş ekranda okunaksız uzamasın
+.form-card {
+  max-width: 48rem;
+}

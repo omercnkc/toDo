@@ -96,38 +96,12 @@
     </ul>
   </div>
 
-  <nav *ngIf="result.totalPages > 1" class="mt-4" aria-label="Sayfalar">
-    <ul class="pagination justify-content-center flex-wrap mb-0">
-      <li class="page-item" [class.disabled]="query.page === 0">
-        <button type="button" class="page-link" (click)="goToPage(query.page - 1)" [disabled]="query.page === 0">
-          Önceki
-        </button>
-      </li>
-      <li *ngFor="let p of pages" class="page-item" [class.active]="p === query.page" [class.disabled]="p === null">
-        <span *ngIf="p === null" class="page-link">…</span>
-        <button
-          *ngIf="p !== null"
-          type="button"
-          class="page-link"
-          (click)="goToPage(p)"
-          [attr.aria-current]="p === query.page ? 'page' : null"
-          [attr.aria-label]="'Sayfa ' + (p + 1)"
-        >
-          {{ p + 1 }}
-        </button>
-      </li>
-      <li class="page-item" [class.disabled]="query.page >= result.totalPages - 1">
-        <button
-          type="button"
-          class="page-link"
-          (click)="goToPage(query.page + 1)"
-          [disabled]="query.page >= result.totalPages - 1"
-        >
-          Sonraki
-        </button>
-      </li>
-    </ul>
-  </nav>
+  <app-pagination
+    class="d-block mt-4"
+    [page]="query.page"
+    [totalPages]="result.totalPages"
+    (pageChange)="goToPage($event)"
+  ></app-pagination>
 </ng-container>
 
 <ng-template #roleBadge let-user>

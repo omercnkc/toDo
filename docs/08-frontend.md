@@ -26,7 +26,8 @@ frontend/src/app/
 |---|---|---|
 | `/login`, `/register` | auth | GuestGuard (girişliyse → `/dashboard`) |
 | `/dashboard` | dashboard | AuthGuard |
-| `/projects` | projects | AuthGuard |
+| `/projects` | projects (liste: arama, Aktif/Arşiv/Tümü, sayfalama) | AuthGuard |
+| `/projects/new`, `/projects/:id/edit` | projects (form) | AuthGuard |
 | `/projects/:id` | projects (detay + üyeler) | AuthGuard |
 | `/invitations` | projects (Davetlerim: kabul/reddet) | AuthGuard |
 | `/projects/:id/board` | tasks (Kanban) | AuthGuard |
@@ -52,6 +53,13 @@ Uygulama notları (2-G):
 - Profil: ad güncellenince `AuthService.updateCurrentUser` ile navbar da güncellenir. Şifre değişince sunucu tüm oturumları kapatır; istemci `auth.logout({ state })` ile çıkış yapıp login'e `LoginNavigationState { email, notice: 'passwordChanged' }` taşır (kayıt sonrası da aynı yapı: `notice: 'registered'`).
 - ADMIN listesi: arama ve sayfa URL'de (`?q=...&page=2`, sayfa 1 tabanlı); arama 300 ms debounce + `replaceUrl`, `switchMap` ile eski istek iptal. Kendi satırında işlem yok; pasifleştirme ve ADMIN yapma `confirm` ister. Masaüstünde tablo, mobilde kart listesi.
 - Ortak: `UserService` (`core/services`), `AvatarComponent` (baş harfler, `shared`), şifre kuralları `newPasswordValidators()` (`shared/forms/validators`).
+
+Uygulama notları (3-E):
+- `ProjectService` (`core/services`) ve `project.model.ts` (`Project`: `myRole`, `canManage`, `memberCount`). `restore()` PUT tam güncelleme olduğu için ad ve açıklamayı da gönderir.
+- Proje listesi: URL `?q=&status=ARCHIVED|ALL&page=` (durum yoksa aktif; sayfa 1 tabanlı), arama 300 ms debounce + `replaceUrl`, sayfa başına 12 kart (1/2/3 sütun). Düzenle/Arşivle/Arşivden çıkar yalnızca `canManage` kartlarda; arşivleme `confirm` ister, işlemden sonra liste yeniden yüklenir (proje filtreden çıkabilir).
+- Form: oluşturma ve düzenleme aynı bileşen; yetkisiz veya arşivdeki projede form kilitlenir ve nedeni yazılır. Kaydedince listeye döner (3-F'de detay sayfasına dönecek).
+- Ortak `PaginationComponent` (`shared`, 0 tabanlı `page`, `pageChange`): kullanıcı listesi de buna geçti.
+- Şablonlarda mutlak `routerLink` (`/projects/new`): göreli bağlantılar testteki sahte `ActivatedRoute` ile çözülemiyordu.
 
 ## Reaktif Yapı (RxJS)
 - Servis tabanlı state: `BehaviorSubject` + `asObservable()`; ağır kütüphane (NgRx) ilk sürümde yok.
