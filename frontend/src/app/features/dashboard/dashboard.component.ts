@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { InvitationService } from '../../core/services/invitation.service';
 
 /**
  * Giriş sonrası açılış sayfası. Şimdilik karşılama; özet sayılar ve grafikler Faz 6'da gelir.
@@ -13,6 +14,8 @@ import { AuthService } from '../../core/auth/auth.service';
 })
 export class DashboardComponent {
   readonly user$ = this.auth.currentUser$;
+  /** Navbar'ın tazelediği sayı; ayrıca istek atılmaz. */
+  readonly pendingInvitations$ = this.invitations.pendingCount$;
 
-  constructor(private readonly auth: AuthService) {}
+  constructor(private readonly auth: AuthService, private readonly invitations: InvitationService) {}
 }

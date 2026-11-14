@@ -29,7 +29,7 @@ frontend/src/app/
 | `/projects` | projects (liste: arama, Aktif/Arşiv/Tümü, sayfalama) | AuthGuard |
 | `/projects/new`, `/projects/:id/edit` | projects (form) | AuthGuard |
 | `/projects/:id` | projects (detay, üyeler, davet gönderme, bekleyen davetler) | AuthGuard |
-| `/invitations` | projects (Davetlerim: kabul/reddet) | AuthGuard |
+| `/invitations` | invitations (Davetlerim: kabul/reddet; ayrı küçük lazy modül) | AuthGuard |
 | `/projects/:id/board` | tasks (Kanban) | AuthGuard |
 | `/projects/:id/tasks` | tasks (liste, arama/filtre) | AuthGuard |
 | `/admin/users` | users | AuthGuard + RoleGuard(ADMIN) |
@@ -66,6 +66,11 @@ Uygulama notları (3-F):
 - Üye çıkarma, davet ve davet geri çekme yalnızca `canManage` + aktif projede; OWNER satırında çıkar düğmesi yok. Adı alınamayan kişi "Kullanıcı #id" (`displayName`).
 - `InvitePanelComponent` (OnPush): en az 3 karakter, 300 ms debounce, `switchMap` ile eski arama iptal; sonuçta "Sen" / "Üye" / "Davet bekliyor" / "Davet et". Pasif kullanıcılar `UserService.search` içinde ayıklanır. Davet isteğini üst bileşen yapar; OnPush girdileri (`memberIds`, `pendingInviteeIds`) her yüklemede yeni dizi.
 - Form kaydı ve düzenlemedeki "Vazgeç" detaya döner; liste kartının başlığı detaya bağlantı.
+
+Uygulama notları (3-G):
+- `InvitationService` (`core/services`): `mine()`, `accept()`, `reject()` ve navbar rozeti için tek kaynak `pendingCount$` (kabul/red sayıyı hemen azaltır). `refreshPendingCount()` sessizdir (`SKIP_ERROR_TOAST`, hata yutulur, son değer kalır).
+- Navbar rozeti: açılışta (`interval(60 sn).pipe(startWith(0))` — `timer(0)` ilk değeri bir sonraki turda verir), her sayfa değişiminde ve sekmeye dönülünce tazelenir; sekme arka plandayken istek atılmaz. Layout kapanınca (çıkış) sayı sıfırlanır. 0 iken rozet görünmez; ekran okuyucu için "bekleyen davet" metni.
+- Davetlerim: kabul edilen davet listeden kalkar ve "Projeye git" bağlantısıyla yeşil uyarı olarak kalır; red onay ister (24 saat uyarısı). 409 (davet geri çekilmiş / proje arşivde) → sunucu mesajı + liste tazelenir. Panel (dashboard) bekleyen davet varsa uyarı gösterir (navbar'ın tazelediği sayıyı kullanır, ayrı istek yok).
 
 ## Reaktif Yapı (RxJS)
 - Servis tabanlı state: `BehaviorSubject` + `asObservable()`; ağır kütüphane (NgRx) ilk sürümde yok.

@@ -35,6 +35,11 @@ const routes: Routes = [
         loadChildren: () => import('./features/projects/projects.module').then((m) => m.ProjectsModule),
       },
       {
+        path: 'invitations',
+        canLoad: [AuthGuard],
+        loadChildren: () => import('./features/invitations/invitations.module').then((m) => m.InvitationsModule),
+      },
+      {
         path: 'profile',
         canLoad: [AuthGuard],
         loadChildren: () => import('./features/profile/profile.module').then((m) => m.ProfileModule),

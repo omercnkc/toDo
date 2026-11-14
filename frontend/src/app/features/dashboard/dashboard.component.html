@@ -2,6 +2,11 @@
   <h1 class="h3 mb-1">Hoş geldin, {{ user.fullName }}</h1>
   <p class="text-muted mb-4">Projelerin ve görevlerinin özeti burada görünecek.</p>
 
+  <div *ngIf="pendingInvitations$ | async as count" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="status">
+    <span class="flex-grow-1">{{ count }} bekleyen proje davetin var.</span>
+    <a routerLink="/invitations" class="btn btn-sm btn-warning">Davetlerime git</a>
+  </div>
+
   <div class="card shadow-sm border-0">
     <div class="card-body p-4">
       <p class="mb-3">Özet sayılar ve grafikler ileride burada olacak. Şimdilik projelerinden devam edebilirsin.</p>

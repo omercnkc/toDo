@@ -4,6 +4,7 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { BehaviorSubject, of } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { InvitationService } from '../../core/services/invitation.service';
 import { User } from '../../core/models/user.model';
 import { initialsOf } from '../../shared/components/avatar/avatar.component';
 import { SharedModule } from '../../shared/shared.module';
@@ -13,6 +14,8 @@ describe('NavbarComponent', () => {
   let fixture: ComponentFixture<NavbarComponent>;
   let user$: BehaviorSubject<User | null>;
   let auth: { currentUser$: BehaviorSubject<User | null>; logout: jasmine.Spy };
+  let pendingCount$: BehaviorSubject<number>;
+  let invitations: { pendingCount$: BehaviorSubject<number>; refreshPendingCount: jasmine.Spy; reset: jasmine.Spy };
 
   function el(): HTMLElement {
     fixture.detectChanges();
@@ -22,10 +25,19 @@ describe('NavbarComponent', () => {
   beforeEach(async () => {
     user$ = new BehaviorSubject<User | null>({ id: 1, email: 'ali@ornek.com', fullName: 'Ali Veli', role: 'USER' });
     auth = { currentUser$: user$, logout: jasmine.createSpy('logout').and.returnValue(of(undefined)) };
+    pendingCount$ = new BehaviorSubject(0);
+    invitations = {
+      pendingCount$,
+      refreshPendingCount: jasmine.createSpy('refreshPendingCount').and.returnValue(of(0)),
+      reset: jasmine.createSpy('reset'),
+    };
     await TestBed.configureTestingModule({
       imports: [RouterTestingModule.withRoutes([{ path: '**', children: [] }]), SharedModule],
       declarations: [NavbarComponent],
-      providers: [{ provide: AuthService, useValue: auth }],
+      providers: [
+        { provide: AuthService, useValue: auth },
+        { provide: InvitationService, useValue: invitations },
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(NavbarComponent);
   });
@@ -70,5 +82,25 @@ describe('NavbarComponent', () => {
     expect(initialsOf('ayşe nur yılmaz')).toBe('AY');
     expect(initialsOf('  ilker  ')).toBe('İ');
     expect(initialsOf('')).toBe('?');
+  });
+
+  it('bekleyen davet rozeti: 0 iken gizli, varsa sayı', () => {
+    expect(el().querySelector('[data-testid="invitation-badge"]')).toBeNull();
+
+    pendingCount$.next(3);
+
+    expect(el().querySelector('[data-testid="invitation-badge"]')?.textContent?.trim()).toBe('3');
+    expect(el().textContent).toContain('bekleyen davet');
+  });
+
+  it('rozet açılışta ve sayfa değişiminde tazelenir; kapanınca sıfırlanır', async () => {
+    el();
+    expect(invitations.refreshPendingCount).toHaveBeenCalledTimes(1);
+
+    await fixture.ngZone!.run(() => TestBed.inject(Router).navigateByUrl('/projects'));
+    expect(invitations.refreshPendingCount).toHaveBeenCalledTimes(2);
+
+    fixture.destroy();
+    expect(invitations.reset).toHaveBeenCalled();
   });
 });

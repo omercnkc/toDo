@@ -35,6 +35,21 @@
             >Projeler</a
           >
         </li>
+        <li class="nav-item">
+          <a
+            class="nav-link d-flex align-items-center gap-1"
+            routerLink="/invitations"
+            routerLinkActive="active"
+            #invitationsLink="routerLinkActive"
+            [attr.aria-current]="invitationsLink.isActive ? 'page' : null"
+          >
+            Davetlerim
+            <ng-container *ngIf="pendingInvitations$ | async as count">
+              <span class="badge rounded-pill bg-warning text-dark" data-testid="invitation-badge">{{ count }}</span>
+              <span class="visually-hidden">bekleyen davet</span>
+            </ng-container>
+          </a>
+        </li>
         <li *ngIf="(user$ | async)?.role === 'ADMIN'" class="nav-item">
           <a
             class="nav-link"
