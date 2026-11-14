@@ -1,7 +1,14 @@
 # Active Context
 
 ## Şu anki odak
-Faz 2 (kimlik) tamamlandı (2026-11-14): 2-A..2-G. Tüm Faz 2 commit'leri push edildi. Sıradaki: Faz 3 (project-service + davet akışı + proje ekranları) — başlarken adım tablosu sunulup roadmap'e eklenecek.
+Faz 3 (proje) başladı; adım tablosu docs/10'da (3-A..3-G). 3-A tamam (commit onayı bekliyor). Sıradaki: 3-B (proje CRUD + proje bazlı yetki).
+Faz 3 varsayımları (kullanıcıya sunuldu, itiraz yok): kalıcı silme + outbox Faz 4'te; arşivden geri alma `PUT /projects/{id}` ile `status: ACTIVE`; üye kendi kendine ayrılamaz; dahili uçlar `/internal/projects/...`; davet rozeti sayfa değişiminde + 60 sn'de bir yenilenir.
+
+## project-service (3-A) notları
+- Paketler: `project` (Project, ProjectStatus), `member` (ProjectMember, MemberRole), `invitation` (ProjectInvitation, InvitationStatus), `config` (SecurityConfig, ProjectProperties). Enum converter'ları enum içinde `JpaConverter` iç sınıfı.
+- Üye/davet → proje `@ManyToOne(LAZY)`; proje tarafında koleksiyon yok. `pending_flag` entity'de eşlenmez (MySQL üretir).
+- JWT yalnızca doğrulanır (`JwtService.verifierOnly`, `project.jwt.secret=${JWT_SECRET}`); test profili `application-test.yml` (sabit secret, eureka kapalı).
+- Compose'ta `project-service` (8082, port yayınlanmaz). Gateway route'ları (`/api/projects/**`, `/api/invitations/**`) Faz 1'den beri hazırdı.
 
 ## Frontend (2-G) notları
 - Route yapısı: korumalı sayfalar `MainLayoutComponent` çocukları (`dashboard`, `profile`, `admin/users`), her lazy çocukta `canLoad`. Layout çocuklarında `''` yollu lazy modül kullanma (girişsiz `/login` eşleşmesinde canLoad yanlış yönlendirir). 404 en sonda, layout dışında.

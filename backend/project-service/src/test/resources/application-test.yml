@@ -1,0 +1,8 @@
+# @ActiveProfiles("test") ile yüklenir. Değerler .env'den bağımsızdır (CI'da .env yok).
+project:
+  jwt:
+    secret: test-secret-test-secret-test-secret-123
+
+eureka:
+  client:
+    enabled: false

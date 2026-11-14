@@ -4,6 +4,48 @@ server:
 spring:
   application:
     name: project-service
+  config:
+    # Yerel geliştirmede repo kökündeki .env okunur (servis repo kökünden, backend/'den veya
+    # modül dizininden çalıştırılabilir). Docker imajında .env yoktur; değerler ortam değişkeninden gelir.
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+      - optional:file:../../.env[.properties]
+  datasource:
+    # Docker'da SPRING_DATASOURCE_URL / _USERNAME / _PASSWORD ortam değişkenleri bunları ezer
+    url: jdbc:mysql://localhost:${MYSQL_PORT:3306}/project_db
+    username: project_user
+    password: ${PROJECT_DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Şemayı Flyway yönetir; Hibernate entity ↔ tablo uyumsuzluğunda açılışta hata verir
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # Instant alanları DATETIME(6) kolonlarına UTC olarak yazılır/okunur
+        jdbc:
+          time_zone: UTC
+  flyway:
+    locations: classpath:db/migration
+  autoconfigure:
+    # Kullanıcı deposu yok (kimlik JWT'den gelir); Boot'un bellek içi kullanıcısına gerek yok
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+project:
+  jwt:
+    # auth-service ile aynı anahtar; bu servis token üretmez, yalnızca doğrular. Boşsa servis açılmaz.
+    secret: ${JWT_SECRET:}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    registry-fetch-interval-seconds: 10
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
 
 management:
   endpoints:
