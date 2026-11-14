@@ -1,13 +1,15 @@
 # Active Context
 
 ## Şu anki odak
-Faz 3 (proje) başladı; adım tablosu docs/10'da (3-A..3-G). 3-A tamam (commit onayı bekliyor). Sıradaki: 3-B (proje CRUD + proje bazlı yetki).
+Faz 3 (proje) başladı; adım tablosu docs/10'da (3-A..3-G). 3-A (`42532e5`) ve 3-B tamam (3-B commit onayı bekliyor). Sıradaki: 3-C (üyelik + auth-service Feign + dahili uçlar).
 Faz 3 varsayımları (kullanıcıya sunuldu, itiraz yok): kalıcı silme + outbox Faz 4'te; arşivden geri alma `PUT /projects/{id}` ile `status: ACTIVE`; üye kendi kendine ayrılamaz; dahili uçlar `/internal/projects/...`; davet rozeti sayfa değişiminde + 60 sn'de bir yenilenir.
 
 ## project-service (3-A) notları
 - Paketler: `project` (Project, ProjectStatus), `member` (ProjectMember, MemberRole), `invitation` (ProjectInvitation, InvitationStatus), `config` (SecurityConfig, ProjectProperties). Enum converter'ları enum içinde `JpaConverter` iç sınıfı.
 - Üye/davet → proje `@ManyToOne(LAZY)`; proje tarafında koleksiyon yok. `pending_flag` entity'de eşlenmez (MySQL üretir).
 - JWT yalnızca doğrulanır (`JwtService.verifierOnly`, `project.jwt.secret=${JWT_SECRET}`); test profili `application-test.yml` (sabit secret, eureka kapalı).
+- 3-B: `access/ProjectAccessService` (`requireMember` → 404/403, `requireManager` → 403 `PROJECT_MANAGE_DENIED`) 3-C/3-D'de de kullanılacak. `ProjectResponse` liste+detay ortak (`myRole`, `canManage`, `memberCount`). PUT tam güncelleme (description gönderilmezse silinir). common-lib `LikePatterns.contains` (auth da kullanıyor).
+- Test tuzakları: yalnız `-pl project-service` ile çalıştırınca common-lib eski jar'dan gelir → `-am` kullan. MockMvc URL şablonunda `%25` yeniden kodlanır → `.param()` kullan. Entegrasyon testleri aynı DB'yi paylaşır → her testte benzersiz kullanıcı id'leri.
 - Compose'ta `project-service` (8082, port yayınlanmaz). Gateway route'ları (`/api/projects/**`, `/api/invitations/**`) Faz 1'den beri hazırdı.
 
 ## Frontend (2-G) notları

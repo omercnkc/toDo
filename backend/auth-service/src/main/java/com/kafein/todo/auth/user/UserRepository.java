@@ -21,7 +21,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * Ad veya e-postada geçen metne göre arama. {@code pattern} null ise filtre yok.
      * Karşılaştırma collation sayesinde büyük/küçük harf duyarsızdır.
      *
-     * @param pattern     {@link #containsPattern} ile üretilmiş {@code %metin%}
+     * @param pattern     {@code LikePatterns.contains} ile üretilmiş {@code %metin%}
      * @param onlyEnabled true ise pasif kullanıcılar dönmez
      */
     // Kaçış karakteri '!': MySQL'de '\' string içinde de kaçış karakteri olduğu için '\' literal'i bozulur
@@ -34,16 +34,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> search(@Param("pattern") String pattern, @Param("onlyEnabled") boolean onlyEnabled, Pageable pageable);
 
     List<User> findAllByIdInOrderByIdAsc(Collection<Long> ids);
-
-    /**
-     * Kullanıcı metnini LIKE desenine çevirir; metindeki {@code % _} joker sayılmaz
-     * ("%" araması tüm kullanıcıları döndürmesin). Metin boşsa null (filtre yok).
-     */
-    static String containsPattern(String text) {
-        if (text == null || text.isBlank()) {
-            return null;
-        }
-        String escaped = text.trim().replace("!", "!!").replace("%", "!%").replace("_", "!_");
-        return "%" + escaped + "%";
-    }
 }

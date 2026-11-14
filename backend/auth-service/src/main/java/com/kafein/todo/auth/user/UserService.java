@@ -10,6 +10,7 @@ import com.kafein.todo.auth.user.dto.UserDetailResponse;
 import com.kafein.todo.auth.user.dto.UserSummaryResponse;
 import com.kafein.todo.common.dto.PageResponse;
 import com.kafein.todo.common.error.ApiException;
+import com.kafein.todo.common.persistence.LikePatterns;
 import com.kafein.todo.common.security.AuthenticatedUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,13 +90,13 @@ public class UserService {
     public PageResponse<?> search(AuthenticatedUser caller, String q, int page, int size) {
         PageRequest pageable = PageRequest.of(page, size, SEARCH_SORT);
         if (caller.isAdmin()) {
-            return toPage(users.search(UserRepository.containsPattern(q), false, pageable), UserDetailResponse::from);
+            return toPage(users.search(LikePatterns.contains(q), false, pageable), UserDetailResponse::from);
         }
         if (q == null || q.trim().length() < MIN_SEARCH_LENGTH) {
             throw ApiException.badRequest("VALIDATION_ERROR", "Doğrulama hatası")
                     .withField("q", "en az " + MIN_SEARCH_LENGTH + " karakter olmalı");
         }
-        return toPage(users.search(UserRepository.containsPattern(q), true, pageable), UserSummaryResponse::from);
+        return toPage(users.search(LikePatterns.contains(q), true, pageable), UserSummaryResponse::from);
     }
 
     // ---------- ADMIN ----------

@@ -80,6 +80,14 @@ auth hata kodları (`error` alanı):
 | POST | `/api/invitations/{id}/accept` | Davet edilen kişi | Kabul → `MEMBER` olarak projeye eklenir |
 | POST | `/api/invitations/{id}/reject` | Davet edilen kişi | Reddet |
 
+Proje uçları uygulama notları (3-B):
+- Proje yanıtı (liste ve detayda aynı): `{id, name, description, status, ownerId, myRole, canManage, memberCount, createdAt, updatedAt}`. `myRole` = `OWNER`/`MEMBER`, üye olmayan ADMIN için `null`; `canManage` = OWNER veya ADMIN (yalnızca arayüz kolaylığı; yetki her istekte sunucuda kontrol edilir).
+- Liste: `q` proje adında "içerir" araması (`%`, `_` joker sayılmaz); `status` = `ACTIVE`/`ARCHIVED`, boşsa hepsi; sıralama son güncellenen önce; `size` 1–100.
+- Olmayan proje → 404 `PROJECT_NOT_FOUND`; var olup erişimi olmayan → 403 `PROJECT_ACCESS_DENIED`; üye ama OWNER/ADMIN değil → 403 `PROJECT_MANAGE_DENIED`.
+- `PUT` tam güncellemedir: `{name, description, status?}`; gönderilmeyen `description` silinir. `status` boşsa değişmez. Arşivlenmiş proje yalnızca aynı istekte `"status": "ACTIVE"` ile geri alınırken düzenlenebilir, aksi halde 409 `PROJECT_ARCHIVED`.
+- `DELETE` arşivler ve idempotenttir (zaten arşivdeyse de 204). `?permanent=true` Faz 4'e kadar 400 `PERMANENT_DELETE_NOT_AVAILABLE`.
+- Sınırlar: ad 1–150 karakter, açıklama en fazla 5000 karakter (boş açıklama `null` saklanır).
+
 Davet yanıtı:
 ```json
 { "id": 7, "status": "PENDING", "createdAt": "2026-11-11T10:00:00Z",

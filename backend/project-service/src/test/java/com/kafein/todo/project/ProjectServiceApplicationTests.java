@@ -70,8 +70,10 @@ class ProjectServiceApplicationTests {
 
     @Test
     void gecerliTokenGuvenlikZincirindenGecer() throws Exception {
-        // Proje uçları 3-B'de; şimdilik geçerli token'la gelen istek 401 değil, 404 (ApiError) almalı
         mvc.perform(get("/projects").header(HttpHeaders.AUTHORIZATION, "Bearer " + token(SECRET, Clock.systemUTC())))
+                .andExpect(status().isOk());
+        // Olmayan yol: 401 değil, ortak biçimde 404
+        mvc.perform(get("/olmayan-yol").header(HttpHeaders.AUTHORIZATION, "Bearer " + token(SECRET, Clock.systemUTC())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("NOT_FOUND"));
     }
