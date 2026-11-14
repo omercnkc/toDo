@@ -1,0 +1,13 @@
+<main class="auth-page d-flex align-items-center justify-content-center px-3 py-5">
+  <div class="auth-card w-100">
+    <p class="brand text-center mb-4" aria-hidden="true">Görev&nbsp;Yöneticisi</p>
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-4 p-sm-5">
+        <h1 class="h4 mb-1">{{ heading }}</h1>
+        <p *ngIf="subheading" class="text-muted mb-4">{{ subheading }}</p>
+        <ng-content></ng-content>
+      </div>
+    </div>
+    <ng-content select="[authFooter]"></ng-content>
+  </div>
+</main>

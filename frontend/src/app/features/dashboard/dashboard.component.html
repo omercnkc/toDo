@@ -1,0 +1,13 @@
+<main class="container py-5">
+  <div *ngIf="user$ | async as user" class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      <h1 class="h4">Hoş geldin, {{ user.fullName }}</h1>
+      <p class="text-muted mb-4">
+        {{ user.email }} · {{ user.role === 'ADMIN' ? 'Yönetici' : 'Kullanıcı' }}
+      </p>
+      <button type="button" class="btn btn-outline-secondary" (click)="logout()" [disabled]="loggingOut">
+        Çıkış yap
+      </button>
+    </div>
+  </div>
+</main>

@@ -24,7 +24,7 @@ frontend/src/app/
 ## Sayfalar / Route'lar
 | Route | Modül | Guard |
 |---|---|---|
-| `/login`, `/register` | auth | – |
+| `/login`, `/register` | auth | GuestGuard (girişliyse → `/dashboard`) |
 | `/dashboard` | dashboard | AuthGuard |
 | `/projects` | projects | AuthGuard |
 | `/projects/:id` | projects (detay + üyeler) | AuthGuard |
@@ -33,6 +33,15 @@ frontend/src/app/
 | `/projects/:id/tasks` | tasks (liste, arama/filtre) | AuthGuard |
 | `/admin/users` | users | AuthGuard + RoleGuard(ADMIN) |
 | `/profile` | users | AuthGuard |
+
+Uygulama notları (2-F):
+- Korumalı modüllerde hem `canLoad` (giriş yoksa lazy kod hiç indirilmez) hem `canActivate`. AuthGuard giriş yoksa `/login?returnUrl=<adres>`'e yönlendirir; login sonrası yalnızca site içi `returnUrl` kabul edilir (`isSafeReturnUrl`: `//`, `http://`, `/login`, `/register` reddedilir → açık yönlendirme koruması).
+- RoleGuard rolleri route `data.roles`'tan okur; yetki yoksa toast + `/dashboard`.
+- Auth modülü `''` yolunda olduğu için route listesinde diğer yollardan sonra gelir.
+- Kayıt otomatik giriş yapmaz; e-posta login'e **router state** ile taşınır (URL'de/geçmişte görünmez) ve alan doldurulmuş gelir.
+- `ReactiveFormsModule` `SharedModule`'den dışa aktarılmaz (AppModule de SharedModule'ü import ettiği için form kütüphanesi ana pakete girerdi); form kullanan lazy modül kendisi import eder.
+- Formlar: `applyServerErrors(form, apiError)` sunucu `fieldErrors`'ını alanlara `server` hatası olarak yazar (alan değişince kalkar); `<app-field-error>` alanın altında ilk hatayı Türkçe gösterir. Doğrulayıcılar: `trimmedEmail` (baş/son boşluk hata sayılmaz), `maxUtf8Bytes(72)`, `fieldsMatch`.
+- Angular 13: tipli formlar (`nonNullable`, `form.controls.x`) ve route `title` yok (v14+); alanlara `form.get('x')` ile erişilir.
 
 ## Reaktif Yapı (RxJS)
 - Servis tabanlı state: `BehaviorSubject` + `asObservable()`; ağır kütüphane (NgRx) ilk sürümde yok.

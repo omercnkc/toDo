@@ -1,7 +1,11 @@
 # Active Context
 
 ## Şu anki odak
-Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2 backend'i tamam (2-A..2-D), 2-E (frontend core) tamam. Sıradaki: 2-F (routing iskeleti + lazy modüller, AuthGuard/RoleGuard/GuestGuard, login & register sayfaları, fieldErrors → form alanları).
+Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2: 2-A..2-F tamam. Sıradaki: 2-G (layout: responsive navbar + çıkış, profil sayfası (ad + şifre değiştirme → yeniden giriş), ADMIN kullanıcı listesi (/admin/users, RoleGuard), sayfa bulunamadı ekranı, faz bitiş kriterlerinin tarayıcıda doğrulanması). Geçici `features/dashboard` 2-G'de layout içine alınacak.
+
+## Frontend (2-F) notları
+- Tarayıcı akış testi: scratchpad'de `e2e-auth.js` (headless Chrome + DevTools Protocol, `ws` frontend/node_modules'ten; `NODE_PATH=frontend/node_modules node e2e-auth.js`), ekran görüntüsü için `screenshots.js`. Önce compose (discovery, gateway, auth) + `ng serve` açık olmalı. Proje dışı, repoya girmez; 2-G'de genişletilip yeniden kullanılabilir.
+- Görsel kontrolde yakalanan: `app-field-error` input-group (flex) içinde yana diziliyordu → host'a `display:block; width:100%`.
 
 ## Frontend (2-E) notları
 - `core/`: `AuthService` (BehaviorSubject state, token yalnız bellekte, `refresh()` tek seferlik, `initialize()` APP_INITIALIZER için Promise, `sessionExpired()`, `updateCurrentUser()`), `AuthInterceptor`, `ErrorInterceptor`, `ToastService`, modeller (`ApiError`+`extractApiError`, `User`/`UserDetail`, `AuthResponse`, `Page<T>`), `CoreModule` (HttpClientModule + interceptors + APP_INITIALIZER; tekrar import'a karşı koruma). `shared/`: `SharedModule`, `ToastContainerComponent` (app.component'te).
