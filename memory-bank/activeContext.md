@@ -1,7 +1,14 @@
 # Active Context
 
 ## Şu anki odak
-Faz 1 (discovery-server + api-gateway) tamamlandı (2026-11-13, yerel commit'ler; push edilmedi). Faz 2: 2-A..2-F tamam. Sıradaki: 2-G (layout: responsive navbar + çıkış, profil sayfası (ad + şifre değiştirme → yeniden giriş), ADMIN kullanıcı listesi (/admin/users, RoleGuard), sayfa bulunamadı ekranı, faz bitiş kriterlerinin tarayıcıda doğrulanması). Geçici `features/dashboard` 2-G'de layout içine alınacak.
+Faz 2 (kimlik) tamamlandı (2026-11-14): 2-A..2-G. 2-G commit'i kullanıcı onayı bekliyor. Sıradaki: Faz 3 (project-service + davet akışı + proje ekranları) — başlarken adım tablosu sunulup roadmap'e eklenecek.
+
+## Frontend (2-G) notları
+- Route yapısı: korumalı sayfalar `MainLayoutComponent` çocukları (`dashboard`, `profile`, `admin/users`), her lazy çocukta `canLoad`. Layout çocuklarında `''` yollu lazy modül kullanma (girişsiz `/login` eşleşmesinde canLoad yanlış yönlendirir). 404 en sonda, layout dışında.
+- `MainLayoutComponent` OnPush olmamalı (router-outlet içindeki OnPush olmayan sayfalar yeniden çizilmiyordu — tarayıcı testinde yakalandı).
+- `LoginNavigationState` artık `core/models/auth.model.ts`'de: `{ email, notice: 'registered' | 'passwordChanged' }`. `AuthService.logout(extras?)`.
+- Tarayıcı testi: scratchpad `e2e-2g.js` (repo kökü argüman; ADMIN bilgisi `.env`'den okunur, ekran görüntüleri aynı klasöre). 98 frontend birim testi.
+- Faz 3'te navbar'a "Projeler" ve "Davetlerim" (+ rozet) bağlantıları eklenecek.
 
 ## Frontend (2-F) notları
 - Tarayıcı akış testi: scratchpad'de `e2e-auth.js` (headless Chrome + DevTools Protocol, `ws` frontend/node_modules'ten; `NODE_PATH=frontend/node_modules node e2e-auth.js`), ekran görüntüsü için `screenshots.js`. Önce compose (discovery, gateway, auth) + `ng serve` açık olmalı. Proje dışı, repoya girmez; 2-G'de genişletilip yeniden kullanılabilir.

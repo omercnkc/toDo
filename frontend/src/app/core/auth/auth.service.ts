@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Router } from '@angular/router';
+import { NavigationExtras, Router } from '@angular/router';
 import { BehaviorSubject, lastValueFrom, Observable, of } from 'rxjs';
 import { catchError, distinctUntilChanged, finalize, map, shareReplay, tap } from 'rxjs/operators';
 
@@ -101,14 +101,16 @@ export class AuthService {
   /**
    * Sunucuda refresh token iptal edilir ve cookie silinir. Sunucu hatası olsa bile yerel oturum
    * temizlenir ve giriş sayfasına gidilir (kullanıcı "çıkış yapamadım" durumunda kalmasın).
+   *
+   * @param extras login'e giderken verilecek seçenekler (örn. şifre değişikliği sonrası router state)
    */
-  logout(): Observable<void> {
+  logout(extras?: NavigationExtras): Observable<void> {
     return this.http.post<void>(`${this.authUrl}/logout`, null).pipe(
       catchError(() => of(undefined)),
       map(() => undefined),
       finalize(() => {
         this.clearSession();
-        void this.router.navigate(['/login']);
+        void this.router.navigate(['/login'], extras);
       }),
     );
   }

@@ -51,7 +51,7 @@ describe('RegisterComponent', () => {
     expect(auth.register).toHaveBeenCalledWith({
       fullName: 'Ayşe Yılmaz', email: 'ayse@ornek.com', password: 'Gizli.Sifre1',
     });
-    expect(router.navigate).toHaveBeenCalledWith(['/login'], { state: { registeredEmail: 'ayse@ornek.com' } });
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], { state: { email: 'ayse@ornek.com', notice: 'registered' } });
   });
 
   it('şifreler eşleşmezse göndermez', () => {

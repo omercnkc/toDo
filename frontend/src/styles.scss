@@ -10,3 +10,8 @@ body {
 body {
   background-color: $gray-100;
 }
+
+// Flex çocuğunun uzun metinle taşmaması için (text-truncate/text-break ile birlikte)
+.min-w-0 {
+  min-width: 0;
+}

@@ -92,6 +92,26 @@ describe('Guard\'lar', () => {
 
       expect(TestBed.inject(RoleGuard).canActivate(routeWithRoles(), state('/x'))).toBeTrue();
     });
+
+    it('canLoad: yetkisi olmayana modülü yükletmez', () => {
+      auth.isAuthenticated = true;
+      auth.role = 'USER';
+      const segments = router.parseUrl('/admin/users').root.children['primary'].segments;
+
+      expect(serialize(TestBed.inject(RoleGuard).canLoad({ data: { roles: ['ADMIN'] } }, segments))).toBe('/dashboard');
+      expect(toast.error).toHaveBeenCalled();
+    });
+
+    it('canLoad: girişsizse adresle login\'e, ADMIN\'i geçirir', () => {
+      const guard = TestBed.inject(RoleGuard);
+      const segments = router.parseUrl('/admin/users').root.children['primary'].segments;
+      const route = { data: { roles: ['ADMIN'] } };
+
+      expect(serialize(guard.canLoad(route, segments))).toBe('/login?returnUrl=%2Fadmin%2Fusers');
+      auth.isAuthenticated = true;
+      auth.role = 'ADMIN';
+      expect(guard.canLoad(route, segments)).toBeTrue();
+    });
   });
 
   describe('GuestGuard', () => {

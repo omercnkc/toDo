@@ -7,14 +7,9 @@ import { finalize } from 'rxjs/operators';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { extractApiError } from '../../../core/models/api-error.model';
-import { LoginRequest } from '../../../core/models/auth.model';
+import { LoginNavigationState, LoginRequest } from '../../../core/models/auth.model';
 import { applyServerErrors, isSafeReturnUrl } from '../../../shared/forms/server-errors';
 import { trimmedEmail } from '../../../shared/forms/validators';
-
-/** Kayıt sayfasından gelirken router state ile taşınan bilgi (e-posta URL'de görünmesin diye). */
-export interface LoginNavigationState {
-  registeredEmail?: string;
-}
 
 @Component({
   selector: 'app-login',
@@ -31,8 +26,8 @@ export class LoginComponent {
   showPassword = false;
   /** Bir alana bağlanamayan sunucu hatası (örn. "E-posta veya şifre hatalı"). */
   formError: string | null = null;
-  /** Kayıttan yeni gelindiyse başarı mesajı gösterilir. */
-  readonly justRegistered: boolean;
+  /** Kayıttan veya şifre değişikliğinden gelindiyse üstte bilgi mesajı gösterilir. */
+  readonly notice: LoginNavigationState['notice'];
 
   constructor(
     private readonly fb: FormBuilder,
@@ -42,9 +37,9 @@ export class LoginComponent {
     location: Location,
   ) {
     const state = location.getState() as LoginNavigationState | null;
-    this.justRegistered = !!state?.registeredEmail;
-    if (state?.registeredEmail) {
-      this.control('email').setValue(state.registeredEmail);
+    this.notice = state?.notice;
+    if (state?.email) {
+      this.control('email').setValue(state.email);
     }
   }
 

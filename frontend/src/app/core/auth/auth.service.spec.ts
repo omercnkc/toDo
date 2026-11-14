@@ -131,7 +131,15 @@ describe('AuthService', () => {
     http.expectOne('/api/auth/logout').flush({}, { status: 500, statusText: 'Server Error' });
 
     expect(service.isAuthenticated).toBeFalse();
-    expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], undefined);
+  });
+
+  it('çıkışta login sayfasına verilen yönlendirme seçeneklerini iletir', () => {
+    const extras = { state: { notice: 'passwordChanged' } };
+    service.logout(extras).subscribe();
+    http.expectOne('/api/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], extras);
   });
 
   it('oturum düşünce kaldığı sayfayı returnUrl olarak taşır', () => {

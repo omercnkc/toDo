@@ -32,7 +32,8 @@ frontend/src/app/
 | `/projects/:id/board` | tasks (Kanban) | AuthGuard |
 | `/projects/:id/tasks` | tasks (liste, arama/filtre) | AuthGuard |
 | `/admin/users` | users | AuthGuard + RoleGuard(ADMIN) |
-| `/profile` | users | AuthGuard |
+| `/profile` | profile | AuthGuard |
+| `**` | layout (404) | — |
 
 Uygulama notları (2-F):
 - Korumalı modüllerde hem `canLoad` (giriş yoksa lazy kod hiç indirilmez) hem `canActivate`. AuthGuard giriş yoksa `/login?returnUrl=<adres>`'e yönlendirir; login sonrası yalnızca site içi `returnUrl` kabul edilir (`isSafeReturnUrl`: `//`, `http://`, `/login`, `/register` reddedilir → açık yönlendirme koruması).
@@ -42,6 +43,15 @@ Uygulama notları (2-F):
 - `ReactiveFormsModule` `SharedModule`'den dışa aktarılmaz (AppModule de SharedModule'ü import ettiği için form kütüphanesi ana pakete girerdi); form kullanan lazy modül kendisi import eder.
 - Formlar: `applyServerErrors(form, apiError)` sunucu `fieldErrors`'ını alanlara `server` hatası olarak yazar (alan değişince kalkar); `<app-field-error>` alanın altında ilk hatayı Türkçe gösterir. Doğrulayıcılar: `trimmedEmail` (baş/son boşluk hata sayılmaz), `maxUtf8Bytes(72)`, `fieldsMatch`.
 - Angular 13: tipli formlar (`nonNullable`, `form.controls.x`) ve route `title` yok (v14+); alanlara `form.get('x')` ile erişilir.
+
+Uygulama notları (2-G):
+- Giriş gerektiren sayfalar `MainLayoutComponent`'in (navbar + içerik) çocuklarıdır; layout'ta `canActivate`/`canActivateChild: [AuthGuard]`. Lazy modüller guard'lardan önce indirildiği için her çocukta ayrıca `canLoad` var (`/admin/users`'ta `RoleGuard`, yetkisizin tarayıcısına kod inmez).
+- Layout çocuklarında `''` yollu lazy modül **olmamalı**: `/login` eşleşmesi denenirken o modülün `canLoad`'u çalışıp girişsiz kullanıcıyı `/login?returnUrl=/login`'e atar. Bu yüzden profil ve ADMIN listesi ayrı modüller (`profile`, `users`).
+- `MainLayoutComponent` **OnPush değil**: router-outlet'e yerleşen sayfalar onun görünümü altında kontrol edilir; OnPush olunca OnPush olmayan sayfalar (profil) HTTP yanıtından sonra yeniden çizilmiyordu.
+- Navbar: mobil menü Angular state'iyle (gezinince kapanır); kullanıcı menüsü Bootstrap dropdown'ı (`data-bs-toggle`, bundle global). ADMIN bağlantısı yalnızca ADMIN'e görünür. Bağlantı rengi kontrast için %85 beyaz.
+- Profil: ad güncellenince `AuthService.updateCurrentUser` ile navbar da güncellenir. Şifre değişince sunucu tüm oturumları kapatır; istemci `auth.logout({ state })` ile çıkış yapıp login'e `LoginNavigationState { email, notice: 'passwordChanged' }` taşır (kayıt sonrası da aynı yapı: `notice: 'registered'`).
+- ADMIN listesi: arama ve sayfa URL'de (`?q=...&page=2`, sayfa 1 tabanlı); arama 300 ms debounce + `replaceUrl`, `switchMap` ile eski istek iptal. Kendi satırında işlem yok; pasifleştirme ve ADMIN yapma `confirm` ister. Masaüstünde tablo, mobilde kart listesi.
+- Ortak: `UserService` (`core/services`), `AvatarComponent` (baş harfler, `shared`), şifre kuralları `newPasswordValidators()` (`shared/forms/validators`).
 
 ## Reaktif Yapı (RxJS)
 - Servis tabanlı state: `BehaviorSubject` + `asObservable()`; ağır kütüphane (NgRx) ilk sürümde yok.

@@ -32,3 +32,12 @@ export function fieldsMatch(field: string, confirmField: string): ValidatorFn {
     return value && confirm && value !== confirm ? { mismatch: true } : null;
   };
 }
+
+/** Şifre kuralları backend ile aynı (docs/07): en az 8 karakter, en fazla 72 bayt (BCrypt sınırı). */
+export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_MAX_BYTES = 72;
+
+/** Yeni şifre alanının doğrulayıcıları (kayıt ve şifre değiştirme). */
+export function newPasswordValidators(): ValidatorFn[] {
+  return [Validators.required, Validators.minLength(PASSWORD_MIN_LENGTH), maxUtf8Bytes(PASSWORD_MAX_BYTES)];
+}

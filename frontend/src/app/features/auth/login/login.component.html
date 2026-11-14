@@ -1,7 +1,12 @@
 <app-auth-shell heading="Giriş yap" subheading="Projelerine ve görevlerine kaldığın yerden devam et.">
-  <div *ngIf="justRegistered && !formError" class="alert alert-success" role="status">
-    Kaydın oluşturuldu. Şimdi giriş yapabilirsin.
-  </div>
+  <ng-container *ngIf="!formError" [ngSwitch]="notice">
+    <div *ngSwitchCase="'registered'" class="alert alert-success" role="status">
+      Kaydın oluşturuldu. Şimdi giriş yapabilirsin.
+    </div>
+    <div *ngSwitchCase="'passwordChanged'" class="alert alert-success" role="status">
+      Şifren değişti ve tüm oturumların kapatıldı. Yeni şifrenle giriş yap.
+    </div>
+  </ng-container>
   <div *ngIf="formError" class="alert alert-danger" role="alert">{{ formError }}</div>
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>

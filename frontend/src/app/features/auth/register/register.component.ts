@@ -6,15 +6,16 @@ import { finalize } from 'rxjs/operators';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { extractApiError } from '../../../core/models/api-error.model';
+import { LoginNavigationState } from '../../../core/models/auth.model';
 import { applyServerErrors } from '../../../shared/forms/server-errors';
-import { fieldsMatch, maxUtf8Bytes, trimmedEmail } from '../../../shared/forms/validators';
-import { LoginNavigationState } from '../login/login.component';
+import {
+  fieldsMatch,
+  newPasswordValidators,
+  PASSWORD_MIN_LENGTH,
+  trimmedEmail,
+} from '../../../shared/forms/validators';
 
 type RegisterField = 'fullName' | 'email' | 'password' | 'confirmPassword';
-
-/** Şifre kuralları backend ile aynı (docs/07): en az 8 karakter, en fazla 72 bayt. */
-export const PASSWORD_MIN_LENGTH = 8;
-export const PASSWORD_MAX_BYTES = 72;
 
 @Component({
   selector: 'app-register',
@@ -27,10 +28,7 @@ export class RegisterComponent {
     {
       fullName: ['', [Validators.required, Validators.maxLength(120)]],
       email: ['', [Validators.required, trimmedEmail, Validators.maxLength(150)]],
-      password: [
-        '',
-        [Validators.required, Validators.minLength(PASSWORD_MIN_LENGTH), maxUtf8Bytes(PASSWORD_MAX_BYTES)],
-      ],
+      password: ['', newPasswordValidators()],
       confirmPassword: ['', Validators.required],
     },
     { validators: fieldsMatch('password', 'confirmPassword') },
@@ -77,7 +75,7 @@ export class RegisterComponent {
       .pipe(finalize(() => (this.submitting = false)))
       .subscribe({
         next: (user) => {
-          const state: LoginNavigationState = { registeredEmail: user.email };
+          const state: LoginNavigationState = { email: user.email, notice: 'registered' };
           void this.router.navigate(['/login'], { state });
         },
         error: (error: unknown) => this.handleError(error),

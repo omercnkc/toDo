@@ -150,11 +150,20 @@ describe('LoginComponent', () => {
   });
 
   it('kayıttan gelince e-postayı doldurur ve başarı mesajı gösterir', async () => {
-    navigationState = { registeredEmail: 'yeni@ornek.com' };
+    navigationState = { email: 'yeni@ornek.com', notice: 'registered' };
     await create();
 
     expect(component.form.get('email')?.value).toBe('yeni@ornek.com');
     expect(text()).toContain('Kaydın oluşturuldu');
+  });
+
+  it('şifre değişikliğinden gelince yeniden giriş mesajı gösterir', async () => {
+    navigationState = { email: 'ayse@ornek.com', notice: 'passwordChanged' };
+    await create();
+
+    expect(component.form.get('email')?.value).toBe('ayse@ornek.com');
+    expect(text()).toContain('Şifren değişti');
+    expect(text()).not.toContain('Kaydın oluşturuldu');
   });
 
   it('şifre göster/gizle', async () => {

@@ -1,0 +1,156 @@
+<h1 class="h3 mb-4">Profilim</h1>
+
+<div *ngIf="loading" class="d-flex align-items-center gap-2 text-muted" role="status">
+  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+  Profil yükleniyor…
+</div>
+
+<div *ngIf="loadFailed && !loading" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="alert">
+  <span>Profil bilgileri yüklenemedi.</span>
+  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="load()">Tekrar dene</button>
+</div>
+
+<div *ngIf="profile" class="row g-4">
+  <!-- Özet -->
+  <div class="col-12 col-lg-4">
+    <section class="card shadow-sm border-0" aria-label="Hesap özeti">
+      <div class="card-body p-4 text-center">
+        <app-avatar class="mb-3" [name]="profile.fullName" size="lg"></app-avatar>
+        <h2 class="h5 mb-1 text-break">{{ profile.fullName }}</h2>
+        <p class="text-muted mb-2 text-break">{{ profile.email }}</p>
+        <span class="badge" [ngClass]="profile.role === 'ADMIN' ? 'bg-primary' : 'bg-secondary'">
+          {{ profile.role === 'ADMIN' ? 'Yönetici' : 'Kullanıcı' }}
+        </span>
+        <p class="small text-muted mt-3 mb-0">Üyelik: {{ profile.createdAt | date: 'dd.MM.yyyy' }}</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-12 col-lg-8 d-flex flex-column gap-4">
+    <!-- Ad -->
+    <section class="card shadow-sm border-0" aria-labelledby="profile-info-heading">
+      <div class="card-body p-4">
+        <h2 id="profile-info-heading" class="h5 mb-3">Profil bilgileri</h2>
+        <div *ngIf="profileError" class="alert alert-danger" role="alert">{{ profileError }}</div>
+
+        <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+          <div class="mb-3">
+            <label for="profile-full-name" class="form-label">Ad soyad</label>
+            <input
+              id="profile-full-name"
+              type="text"
+              class="form-control"
+              formControlName="fullName"
+              autocomplete="name"
+              [class.is-invalid]="isInvalid(fullNameControl)"
+              [attr.aria-invalid]="isInvalid(fullNameControl)"
+              aria-describedby="profile-full-name-error"
+            />
+            <app-field-error [control]="fullNameControl" errorId="profile-full-name-error"></app-field-error>
+          </div>
+
+          <div class="mb-4">
+            <label for="profile-email" class="form-label">E-posta</label>
+            <input
+              id="profile-email"
+              type="email"
+              class="form-control"
+              [value]="profile.email"
+              readonly
+              aria-describedby="profile-email-hint"
+            />
+            <div id="profile-email-hint" class="form-text">E-posta adresi değiştirilemez.</div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" [disabled]="savingProfile || profileForm.pristine">
+            <span *ngIf="savingProfile" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            {{ savingProfile ? 'Kaydediliyor…' : 'Kaydet' }}
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Şifre -->
+    <section class="card shadow-sm border-0" aria-labelledby="password-heading">
+      <div class="card-body p-4">
+        <h2 id="password-heading" class="h5 mb-1">Şifre değiştir</h2>
+        <p class="text-muted small mb-3">Şifren değişince tüm cihazlardaki oturumların kapanır ve yeniden giriş yaparsın.</p>
+        <div *ngIf="passwordError" class="alert alert-danger" role="alert">{{ passwordError }}</div>
+
+        <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
+          <!-- Şifre yöneticileri yeni şifreyi doğru hesaba kaydetsin diye -->
+          <input type="email" class="d-none" autocomplete="username" [value]="profile.email" tabindex="-1" aria-hidden="true" />
+
+          <div class="mb-3">
+            <label for="current-password" class="form-label">Mevcut şifre</label>
+            <input
+              id="current-password"
+              [type]="showPasswords ? 'text' : 'password'"
+              class="form-control"
+              formControlName="currentPassword"
+              autocomplete="current-password"
+              [class.is-invalid]="isInvalid(passwordControl('currentPassword'))"
+              [attr.aria-invalid]="isInvalid(passwordControl('currentPassword'))"
+              aria-describedby="current-password-error"
+            />
+            <app-field-error
+              [control]="passwordControl('currentPassword')"
+              errorId="current-password-error"
+            ></app-field-error>
+          </div>
+
+          <div class="mb-3">
+            <label for="new-password" class="form-label">Yeni şifre</label>
+            <input
+              id="new-password"
+              [type]="showPasswords ? 'text' : 'password'"
+              class="form-control"
+              formControlName="newPassword"
+              autocomplete="new-password"
+              [class.is-invalid]="isInvalid(passwordControl('newPassword'))"
+              [attr.aria-invalid]="isInvalid(passwordControl('newPassword'))"
+              aria-describedby="new-password-hint new-password-error"
+            />
+            <app-field-error [control]="passwordControl('newPassword')" errorId="new-password-error"></app-field-error>
+            <div id="new-password-hint" class="form-text">En az {{ passwordMinLength }} karakter.</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="confirm-password" class="form-label">Yeni şifre (tekrar)</label>
+            <input
+              id="confirm-password"
+              [type]="showPasswords ? 'text' : 'password'"
+              class="form-control"
+              formControlName="confirmPassword"
+              autocomplete="new-password"
+              [class.is-invalid]="isInvalid(passwordControl('confirmPassword')) || passwordsMismatch"
+              [attr.aria-invalid]="isInvalid(passwordControl('confirmPassword')) || passwordsMismatch"
+              aria-describedby="confirm-password-error"
+            />
+            <app-field-error
+              [control]="passwordControl('confirmPassword')"
+              errorId="confirm-password-error"
+            ></app-field-error>
+            <div
+              *ngIf="passwordsMismatch && !passwordControl('confirmPassword').errors"
+              id="confirm-password-error"
+              class="invalid-feedback d-block"
+            >
+              Şifreler eşleşmiyor
+            </div>
+          </div>
+
+          <div class="form-check mb-4">
+            <input id="show-passwords" type="checkbox" class="form-check-input" [checked]="showPasswords" (change)="showPasswords = !showPasswords" />
+            <label for="show-passwords" class="form-check-label">Şifreleri göster</label>
+          </div>
+
+          <button type="submit" class="btn btn-primary" [disabled]="changingPassword">
+            <span *ngIf="changingPassword" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            {{ changingPassword ? 'Değiştiriliyor…' : 'Şifreyi değiştir' }}
+          </button>
+        </form>
+      </div>
+    </section>
+  </div>
+</div>

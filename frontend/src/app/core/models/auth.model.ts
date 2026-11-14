@@ -21,3 +21,13 @@ export interface AuthResponse {
   expiresIn: number;
   user: User;
 }
+
+/**
+ * Login sayfasına router state ile taşınan bilgi (URL'de/geçmişte görünmesin diye query param değil).
+ * - `registered`: kayıttan gelindi, e-posta doldurulur.
+ * - `passwordChanged`: şifre değişti, tüm oturumlar kapandı; yeniden giriş istenir.
+ */
+export interface LoginNavigationState {
+  email?: string;
+  notice?: 'registered' | 'passwordChanged';
+}

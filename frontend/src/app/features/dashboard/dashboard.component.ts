@@ -3,8 +3,8 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 
 /**
- * Geçici giriş sonrası sayfası (2-F): korumalı bir sayfa ve çıkış düğmesi sağlar.
- * Navbar/layout 2-G'de, asıl dashboard içeriği Faz 6'da gelir.
+ * Giriş sonrası açılış sayfası. Şimdilik karşılama; özet sayılar ve grafikler Faz 6'da gelir.
+ * Çıkış ve profil bağlantıları navbar'da (layout).
  */
 @Component({
   selector: 'app-dashboard',
@@ -13,12 +13,6 @@ import { AuthService } from '../../core/auth/auth.service';
 })
 export class DashboardComponent {
   readonly user$ = this.auth.currentUser$;
-  loggingOut = false;
 
   constructor(private readonly auth: AuthService) {}
-
-  logout(): void {
-    this.loggingOut = true;
-    this.auth.logout().subscribe();
-  }
 }

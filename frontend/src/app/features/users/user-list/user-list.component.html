@@ -1,0 +1,168 @@
+<div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+  <div>
+    <h1 class="h3 mb-1">Kullanıcılar</h1>
+    <p class="text-muted mb-0" aria-live="polite">
+      <ng-container *ngIf="result">{{ result.totalElements }} kullanıcı</ng-container>
+    </p>
+  </div>
+  <div class="search-box">
+    <label for="user-search" class="visually-hidden">Ad veya e-posta ile ara</label>
+    <input
+      id="user-search"
+      type="search"
+      class="form-control"
+      placeholder="Ad veya e-posta ile ara"
+      [formControl]="search"
+      autocomplete="off"
+    />
+  </div>
+</div>
+
+<div *ngIf="loadFailed" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="alert">
+  <span>Kullanıcılar yüklenemedi.</span>
+  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="retry()">Tekrar dene</button>
+</div>
+
+<div *ngIf="loading && !result" class="d-flex align-items-center gap-2 text-muted" role="status">
+  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+  Yükleniyor…
+</div>
+
+<ng-container *ngIf="result">
+  <div *ngIf="result.content.length === 0" class="card shadow-sm border-0">
+    <div class="card-body p-5 text-center text-muted">
+      {{ query.q ? '“' + query.q + '” ile eşleşen kullanıcı yok.' : 'Henüz kullanıcı yok.' }}
+    </div>
+  </div>
+
+  <div *ngIf="result.content.length > 0" class="card shadow-sm border-0" [class.opacity-50]="loading" [attr.aria-busy]="loading">
+    <!-- Masaüstü: tablo -->
+    <div class="d-none d-md-block">
+      <table class="table align-middle mb-0">
+        <caption class="visually-hidden">Kullanıcı listesi</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="ps-4">Kullanıcı</th>
+            <th scope="col">Rol</th>
+            <th scope="col">Durum</th>
+            <th scope="col" class="d-none d-lg-table-cell">Kayıt</th>
+            <th scope="col" class="text-end pe-4">İşlemler</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of result.content; trackBy: trackById" [class.text-muted]="!user.enabled">
+            <td class="ps-4">
+              <div class="d-flex align-items-center gap-3">
+                <app-avatar [name]="user.fullName" size="md"></app-avatar>
+                <div class="min-w-0">
+                  <div class="fw-semibold text-break">
+                    {{ user.fullName }}
+                    <span *ngIf="isSelf(user)" class="badge bg-light text-dark border ms-1">Sen</span>
+                  </div>
+                  <div class="small text-muted text-break">{{ user.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td><ng-container *ngTemplateOutlet="roleBadge; context: { $implicit: user }"></ng-container></td>
+            <td><ng-container *ngTemplateOutlet="statusBadge; context: { $implicit: user }"></ng-container></td>
+            <td class="d-none d-lg-table-cell small">{{ user.createdAt | date: 'dd.MM.yyyy' }}</td>
+            <td class="text-end pe-4">
+              <ng-container *ngTemplateOutlet="actions; context: { $implicit: user }"></ng-container>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobil: kart listesi -->
+    <ul class="list-group list-group-flush d-md-none">
+      <li *ngFor="let user of result.content; trackBy: trackById" class="list-group-item py-3">
+        <div class="d-flex align-items-start gap-3">
+          <app-avatar [name]="user.fullName" size="md"></app-avatar>
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-semibold text-break">
+              {{ user.fullName }}
+              <span *ngIf="isSelf(user)" class="badge bg-light text-dark border ms-1">Sen</span>
+            </div>
+            <div class="small text-muted text-break mb-2">{{ user.email }}</div>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <ng-container *ngTemplateOutlet="roleBadge; context: { $implicit: user }"></ng-container>
+              <ng-container *ngTemplateOutlet="statusBadge; context: { $implicit: user }"></ng-container>
+            </div>
+            <ng-container *ngTemplateOutlet="actions; context: { $implicit: user }"></ng-container>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <nav *ngIf="result.totalPages > 1" class="mt-4" aria-label="Sayfalar">
+    <ul class="pagination justify-content-center flex-wrap mb-0">
+      <li class="page-item" [class.disabled]="query.page === 0">
+        <button type="button" class="page-link" (click)="goToPage(query.page - 1)" [disabled]="query.page === 0">
+          Önceki
+        </button>
+      </li>
+      <li *ngFor="let p of pages" class="page-item" [class.active]="p === query.page" [class.disabled]="p === null">
+        <span *ngIf="p === null" class="page-link">…</span>
+        <button
+          *ngIf="p !== null"
+          type="button"
+          class="page-link"
+          (click)="goToPage(p)"
+          [attr.aria-current]="p === query.page ? 'page' : null"
+          [attr.aria-label]="'Sayfa ' + (p + 1)"
+        >
+          {{ p + 1 }}
+        </button>
+      </li>
+      <li class="page-item" [class.disabled]="query.page >= result.totalPages - 1">
+        <button
+          type="button"
+          class="page-link"
+          (click)="goToPage(query.page + 1)"
+          [disabled]="query.page >= result.totalPages - 1"
+        >
+          Sonraki
+        </button>
+      </li>
+    </ul>
+  </nav>
+</ng-container>
+
+<ng-template #roleBadge let-user>
+  <span class="badge" [ngClass]="user.role === 'ADMIN' ? 'bg-primary' : 'bg-secondary'">
+    {{ user.role === 'ADMIN' ? 'Yönetici' : 'Kullanıcı' }}
+  </span>
+</ng-template>
+
+<ng-template #statusBadge let-user>
+  <span class="badge" [ngClass]="user.enabled ? 'bg-success' : 'bg-danger'">
+    {{ user.enabled ? 'Aktif' : 'Pasif' }}
+  </span>
+</ng-template>
+
+<ng-template #actions let-user>
+  <span *ngIf="isSelf(user)" class="small text-muted">Kendi hesabın</span>
+  <div *ngIf="!isSelf(user)" class="d-inline-flex flex-wrap gap-2 justify-content-end">
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-primary"
+      [disabled]="pendingId === user.id"
+      (click)="changeRole(user, user.role === 'ADMIN' ? 'USER' : 'ADMIN')"
+      [attr.aria-label]="(user.role === 'ADMIN' ? 'Yöneticiliği kaldır: ' : 'Yönetici yap: ') + user.fullName"
+    >
+      {{ user.role === 'ADMIN' ? 'Yöneticiliği kaldır' : 'Yönetici yap' }}
+    </button>
+    <button
+      type="button"
+      class="btn btn-sm"
+      [ngClass]="user.enabled ? 'btn-outline-danger' : 'btn-outline-success'"
+      [disabled]="pendingId === user.id"
+      (click)="setEnabled(user, !user.enabled)"
+      [attr.aria-label]="(user.enabled ? 'Pasifleştir: ' : 'Aktifleştir: ') + user.fullName"
+    >
+      {{ user.enabled ? 'Pasifleştir' : 'Aktifleştir' }}
+    </button>
+  </div>
+</ng-template>

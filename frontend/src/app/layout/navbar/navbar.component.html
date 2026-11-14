@@ -1,0 +1,70 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm" aria-label="Ana menü">
+  <div class="container">
+    <a class="navbar-brand fw-semibold" routerLink="/dashboard">Görev Yöneticisi</a>
+
+    <button
+      type="button"
+      class="navbar-toggler"
+      (click)="toggleMenu()"
+      aria-controls="main-nav"
+      [attr.aria-expanded]="menuOpen"
+      aria-label="Menüyü aç/kapat"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div id="main-nav" class="collapse navbar-collapse" [class.show]="menuOpen">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            routerLink="/dashboard"
+            routerLinkActive="active"
+            #dashboardLink="routerLinkActive"
+            [attr.aria-current]="dashboardLink.isActive ? 'page' : null"
+            >Panel</a
+          >
+        </li>
+        <li *ngIf="(user$ | async)?.role === 'ADMIN'" class="nav-item">
+          <a
+            class="nav-link"
+            routerLink="/admin/users"
+            routerLinkActive="active"
+            #usersLink="routerLinkActive"
+            [attr.aria-current]="usersLink.isActive ? 'page' : null"
+            >Kullanıcılar</a
+          >
+        </li>
+      </ul>
+
+      <ul *ngIf="user$ | async as user" class="navbar-nav">
+        <li class="nav-item dropdown">
+          <button
+            type="button"
+            id="user-menu"
+            class="nav-link dropdown-toggle btn btn-link d-flex align-items-center gap-2"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            <app-avatar [name]="user.fullName" size="sm" variant="onDark"></app-avatar>
+            <span class="user-name text-truncate">{{ user.fullName }}</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="user-menu">
+            <li class="px-3 py-2">
+              <div class="fw-semibold text-truncate">{{ user.fullName }}</div>
+              <div class="small text-muted text-truncate">{{ user.email }}</div>
+              <span *ngIf="user.role === 'ADMIN'" class="badge bg-primary mt-1">Yönetici</span>
+            </li>
+            <li><hr class="dropdown-divider" /></li>
+            <li><a class="dropdown-item" routerLink="/profile">Profilim</a></li>
+            <li>
+              <button type="button" class="dropdown-item" (click)="logout()" [disabled]="loggingOut">
+                {{ loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap' }}
+              </button>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
