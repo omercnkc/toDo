@@ -129,6 +129,11 @@ public abstract class IntegrationTestSupport {
         return "Bearer " + JWT.generateAccessToken(user);
     }
 
+    /** project-service outbox relay'inin kullanacağı servis token'ı. */
+    protected static String serviceBearer() {
+        return "Bearer " + JWT.generateServiceToken("project-service");
+    }
+
     protected ResultActions perform(MockHttpServletRequestBuilder request, AuthenticatedUser as) throws Exception {
         return mvc.perform(request.header(HttpHeaders.AUTHORIZATION, bearer(as)));
     }

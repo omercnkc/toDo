@@ -60,6 +60,8 @@ Uygulama: `@PreAuthorize` ile rol kontrolü; proje bazlı yetki (üyelik/OWNER) 
 ## Servisler Arası Güvenlik
 - Feign interceptor kullanıcının Authorization header'ını iletir (kullanıcı bağlamı korunur).
 - Kullanıcı isteği dışında çalışan çağrılar (outbox relay) için common-lib kısa ömürlü (1 dk) **servis JWT'si** üretir: `sub=project-service`, `role=SERVICE`. `/internal/**` uçları uca göre ya `SERVICE` rolünü ya da iletilen kullanıcı token'ını kabul eder; `SERVICE` rolü dış uçlarda geçersizdir.
+  - Uygulama (Faz 4-D): `JwtService.generateServiceToken` / `parseServiceToken`; servis token'ı `Role` enum'unda yoktur (veritabanına yazılamaz, `parseAccessToken` onu reddeder), principal `ServicePrincipal`, yetki `ROLE_SERVICE`. Ortak `JwtAuthenticationFilter` servis token'ını **yalnızca `/internal/**` yollarında** tanır; dış uçlarda istek kimliksiz kalır (401). Gateway de yalnızca kullanıcı token'ını kabul eder.
+  - task-service'in dahili uçları yalnızca `SERVICE` ister (kullanıcı token'ı 403). auth-service ve project-service'in mevcut dahili uçları iletilen kullanıcı token'ını kabul etmeye devam eder.
 - `/internal/**` uçları gateway'de route edilmez; ek olarak servis içinde ağ dışından gelen çağrılar reddedilir (compose ağında yalnızca gateway yayınlanır).
 
 ## Diğer Önlemler

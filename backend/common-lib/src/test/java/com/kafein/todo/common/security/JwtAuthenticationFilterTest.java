@@ -82,8 +82,43 @@ class JwtAuthenticationFilterTest {
         assertThat(seenAuthentication.get()).isNull();
     }
 
+    @Test
+    void servisTokeniDahiliUctaServisOlarakTaninir() throws Exception {
+        String token = jwtService.generateServiceToken("project-service");
+
+        filter.doFilter(request("Bearer " + token, "/internal/tasks/by-project/5"), new MockHttpServletResponse(), chain);
+
+        Authentication authentication = seenAuthentication.get();
+        assertThat(authentication).isNotNull();
+        assertThat(authentication.getPrincipal()).isEqualTo(new ServicePrincipal("project-service"));
+        assertThat(authentication.getAuthorities()).extracting(GrantedAuthority::getAuthority)
+                .containsExactly("ROLE_SERVICE");
+    }
+
+    @Test
+    void servisTokeniDisUctaKimliksizKalir() throws Exception {
+        String token = jwtService.generateServiceToken("project-service");
+
+        for (String path : new String[]{"/tasks", "/projects/1", "/internal", "/internalx/y"}) {
+            filter.doFilter(request("Bearer " + token, path), new MockHttpServletResponse(), chain);
+            assertThat(seenAuthentication.get()).as(path).isNull();
+        }
+    }
+
+    @Test
+    void kullaniciTokeniDahiliUctaDaKullanicidir() throws Exception {
+        filter.doFilter(request("Bearer " + jwtService.generateAccessToken(USER), "/internal/users/1"),
+                new MockHttpServletResponse(), chain);
+
+        assertThat(seenAuthentication.get().getPrincipal()).isEqualTo(USER);
+    }
+
     private static MockHttpServletRequest request(String authorization) {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/users/me");
+        return request(authorization, "/users/me");
+    }
+
+    private static MockHttpServletRequest request(String authorization, String path) {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", path);
         if (authorization != null) {
             request.addHeader(HttpHeaders.AUTHORIZATION, authorization);
         }

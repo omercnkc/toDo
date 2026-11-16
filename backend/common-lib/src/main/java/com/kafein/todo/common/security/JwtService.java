@@ -14,6 +14,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.function.Function;
 
 /**
  * Access token üretimi ve doğrulaması (HS256, bkz. docs/07-security.md).
@@ -26,6 +27,9 @@ public class JwtService {
 
     public static final String CLAIM_EMAIL = "email";
     public static final String CLAIM_ROLE = "role";
+
+    /** Servis token'ı ömrü: yalnızca tek bir çağrı için üretilir (docs/07). */
+    public static final Duration SERVICE_TOKEN_TTL = Duration.ofMinutes(1);
 
     /** HS256 için RFC 7518 alt sınırı: 256 bit. */
     static final int MIN_SECRET_BYTES = 32;
@@ -89,6 +93,39 @@ public class JwtService {
      * @throws InvalidTokenException imza, süre, algoritma veya claim'ler geçersizse
      */
     public AuthenticatedUser parseAccessToken(String token) {
+        // Servis token'ı burada reddedilir: sub sayı değil, SERVICE bir Role değil
+        return parse(token, JwtService::toUser);
+    }
+
+    /**
+     * Kullanıcı isteği dışındaki servisler arası çağrılar (outbox relay) için kısa ömürlü servis token'ı
+     * (docs/07 "Servisler Arası Güvenlik"): {@code sub=<servis adı>}, {@code role=SERVICE}, ömür
+     * {@link #SERVICE_TOKEN_TTL}. Kullanıcı token'ı üretmeyen ({@link #verifierOnly}) örnek de üretebilir.
+     */
+    public String generateServiceToken(String serviceName) {
+        if (serviceName == null || serviceName.isBlank()) {
+            throw new IllegalArgumentException("Servis adı boş olamaz");
+        }
+        Instant now = clock.instant();
+        return Jwts.builder()
+                .subject(serviceName)
+                .claim(CLAIM_ROLE, ServicePrincipal.ROLE)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(SERVICE_TOKEN_TTL)))
+                .signWith(key, Jwts.SIG.HS256)
+                .compact();
+    }
+
+    /**
+     * Servis token'ını doğrular. Kullanıcı token'ı burada reddedilir.
+     *
+     * @throws InvalidTokenException imza, süre, algoritma geçersizse veya {@code role} {@code SERVICE} değilse
+     */
+    public ServicePrincipal parseServiceToken(String token) {
+        return parse(token, JwtService::toService);
+    }
+
+    private <T> T parse(String token, Function<Claims, T> mapper) {
         if (token == null || token.isBlank()) {
             throw new InvalidTokenException("Token boş");
         }
@@ -98,7 +135,12 @@ public class JwtService {
             if (!ALGORITHM.equals(jws.getHeader().getAlgorithm())) {
                 throw new InvalidTokenException("Beklenmeyen imza algoritması: " + jws.getHeader().getAlgorithm());
             }
-            return toUser(jws.getPayload());
+            Claims claims = jws.getPayload();
+            // exp zorunlu: jjwt exp'siz token'ı süresiz kabul eder
+            if (claims.getExpiration() == null) {
+                throw new InvalidTokenException("exp claim'i yok");
+            }
+            return mapper.apply(claims);
         } catch (ExpiredJwtException e) {
             throw new InvalidTokenException("Token süresi dolmuş", e);
         } catch (JwtException | IllegalArgumentException e) {
@@ -118,11 +160,15 @@ public class JwtService {
         return ttl;
     }
 
-    private static AuthenticatedUser toUser(Claims claims) {
-        // exp zorunlu: jjwt exp'siz token'ı süresiz kabul eder
-        if (claims.getExpiration() == null) {
-            throw new InvalidTokenException("exp claim'i yok");
+    private static ServicePrincipal toService(Claims claims) {
+        String subject = claims.getSubject();
+        if (!ServicePrincipal.ROLE.equals(claims.get(CLAIM_ROLE, String.class)) || subject == null || subject.isBlank()) {
+            throw new InvalidTokenException("Servis token'ı değil");
         }
+        return new ServicePrincipal(subject);
+    }
+
+    private static AuthenticatedUser toUser(Claims claims) {
         String subject = claims.getSubject();
         String email = claims.get(CLAIM_EMAIL, String.class);
         String role = claims.get(CLAIM_ROLE, String.class);

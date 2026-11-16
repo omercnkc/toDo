@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
@@ -41,4 +42,19 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             + " where t.projectId = :projectId and t.status = :status and t.position between :from and :to")
     int shift(@Param("projectId") long projectId, @Param("status") TaskStatus status,
               @Param("from") int from, @Param("to") int to, @Param("delta") int delta);
+
+    /** Projenin tüm görevleri (kalıcı silinen proje; outbox relay). */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from Task t where t.projectId = :projectId")
+    int deleteByProject(@Param("projectId") long projectId);
+
+    /**
+     * Projeden çıkarılan kişinin o projedeki atamalarını boşaltır. Sıra kaydırmanın aksine içerik değişikliği
+     * sayılır: normal düzenlemedeki gibi {@code version} artar ve {@code updated_at} güncellenir.
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Task t set t.assigneeId = null, t.version = t.version + 1, t.updatedAt = :now"
+            + " where t.projectId = :projectId and t.assigneeId = :userId")
+    int unassignInProject(@Param("projectId") long projectId, @Param("userId") long userId,
+                          @Param("now") Instant now);
 }

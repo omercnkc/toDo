@@ -156,6 +156,53 @@ class JwtServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    // ---------- servis token'ı ----------
+
+    @Test
+    void servisTokeniUretilirVeCozulur() {
+        String token = service.generateServiceToken("project-service");
+
+        assertThat(service.parseServiceToken(token)).isEqualTo(new ServicePrincipal("project-service"));
+        Claims claims = Jwts.parser().verifyWith(key(SECRET)).clock(() -> Date.from(NOW)).build()
+                .parseSignedClaims(token).getPayload();
+        assertThat(claims.getSubject()).isEqualTo("project-service");
+        assertThat(claims.get("role", String.class)).isEqualTo("SERVICE");
+        assertThat(claims.getExpiration().toInstant()).as("ömür 1 dakika").isEqualTo(NOW.plus(Duration.ofMinutes(1)));
+    }
+
+    @Test
+    void servisTokeniKullaniciTokeniYerineGecmezVeTersi() {
+        String serviceToken = service.generateServiceToken("project-service");
+        String userToken = service.generateAccessToken(USER);
+
+        assertThatThrownBy(() -> service.parseAccessToken(serviceToken)).isInstanceOf(InvalidTokenException.class);
+        assertThatThrownBy(() -> service.parseServiceToken(userToken)).isInstanceOf(InvalidTokenException.class);
+        // Sayısal sub + SERVICE rolüyle elle imzalanmış token da kullanıcı sayılmaz
+        assertThatThrownBy(() -> service.parseAccessToken(signed("1", "SERVICE"))).isInstanceOf(InvalidTokenException.class);
+    }
+
+    @Test
+    void servisTokeniBirDakikaSonraGecersiz() {
+        String token = service.generateServiceToken("project-service");
+        JwtService later = new JwtService(SECRET, TTL, clockAt(NOW.plus(Duration.ofSeconds(61))));
+
+        assertThatThrownBy(() -> later.parseServiceToken(token))
+                .isInstanceOf(InvalidTokenException.class)
+                .hasMessageContaining("süresi dolmuş");
+    }
+
+    @Test
+    void yalnizcaDogrulayanOrnekServisTokeniUretebilir() {
+        JwtService verifier = JwtService.verifierOnly(SECRET, clockAt(NOW));
+
+        String token = verifier.generateServiceToken("project-service");
+
+        assertThat(service.parseServiceToken(token).name()).isEqualTo("project-service");
+        assertThatThrownBy(() -> verifier.generateServiceToken(" ")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new JwtService("baska-bir-anahtar-baska-bir-anahtar-123", TTL, clockAt(NOW))
+                .parseServiceToken(token)).isInstanceOf(InvalidTokenException.class);
+    }
+
     private String signed(String subject, String role) {
         return Jwts.builder()
                 .subject(subject).claim("email", "a@b.com").claim("role", role)

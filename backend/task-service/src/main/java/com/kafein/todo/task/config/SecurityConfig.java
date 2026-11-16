@@ -2,6 +2,8 @@ package com.kafein.todo.task.config;
 
 import com.kafein.todo.common.security.JwtAuthenticationFilter;
 import com.kafein.todo.common.security.JwtService;
+import com.kafein.todo.common.security.Role;
+import com.kafein.todo.common.security.ServicePrincipal;
 import com.kafein.todo.common.security.web.ApiErrorAccessDeniedHandler;
 import com.kafein.todo.common.security.web.ApiErrorAuthenticationEntryPoint;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -18,6 +20,7 @@ import java.time.Clock;
 
 /**
  * Tüm uçlar giriş gerektirir; kimlik Bearer JWT'den gelir (auth-service üretir, bu servis yalnızca doğrular).
+ * Dış uçlar kullanıcı token'ı (USER/ADMIN), {@code /internal/**} yalnızca servis token'ı ({@code SERVICE}) ister.
  * Proje bazlı yetki (üye / OWNER / ADMIN) servis katmanında, project-service'e sorularak kontrol edilir (docs/07).
  */
 @Configuration
@@ -40,7 +43,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/error").permitAll()
-                        .anyRequest().authenticated())
+                        // Dahili uçları yalnızca project-service'in outbox relay'i çağırır (servis token'ı)
+                        .requestMatchers("/internal/**").hasRole(ServicePrincipal.ROLE)
+                        .anyRequest().hasAnyRole(Role.USER.name(), Role.ADMIN.name()))
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))

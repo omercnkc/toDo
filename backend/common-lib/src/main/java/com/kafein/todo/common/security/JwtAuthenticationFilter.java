@@ -13,13 +13,15 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UrlPathHelper;
 
 import java.io.IOException;
 import java.util.List;
 
 /**
  * Servislerde (servlet) {@code Authorization: Bearer} token'ını doğrulayıp Spring Security
- * bağlamına {@link AuthenticatedUser} koyan filtre.
+ * bağlamına {@link AuthenticatedUser} koyan filtre. {@code /internal/**} uçlarında servis token'ı da
+ * kabul edilir; o zaman principal {@link ServicePrincipal}, yetki {@code ROLE_SERVICE} olur.
  * <p>
  * Gateway token'ı zaten doğruluyor; servisler yine de kendisi doğrular (savunma derinliği,
  * docs/07-security.md). Gateway'in eklediği {@code X-User-*} header'larına güvenilmez.
@@ -36,6 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Log log = LogFactory.getLog(JwtAuthenticationFilter.class);
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String INTERNAL_PREFIX = "/internal/";
 
     private final JwtService jwtService;
     private final WebAuthenticationDetailsSource detailsSource = new WebAuthenticationDetailsSource();
@@ -57,16 +60,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void authenticate(HttpServletRequest request, String token) {
         try {
             AuthenticatedUser user = jwtService.parseAccessToken(token);
-            var authentication = UsernamePasswordAuthenticationToken.authenticated(
-                    user, null, List.of(new SimpleGrantedAuthority(user.role().authority())));
-            authentication.setDetails(detailsSource.buildDetails(request));
-
-            SecurityContext context = SecurityContextHolder.createEmptyContext();
-            context.setAuthentication(authentication);
-            SecurityContextHolder.setContext(context);
-        } catch (InvalidTokenException e) {
+            setAuthentication(request, user, user.role().authority());
+        } catch (InvalidTokenException userTokenError) {
+            if (isInternalPath(request)) {
+                try {
+                    ServicePrincipal service = jwtService.parseServiceToken(token);
+                    setAuthentication(request, service, ServicePrincipal.AUTHORITY);
+                    return;
+                } catch (InvalidTokenException ignored) {
+                    // kullanıcı token'ının hatası loglanır
+                }
+            }
             SecurityContextHolder.clearContext();
-            log.debug("JWT reddedildi: " + e.getMessage());
+            log.debug("JWT reddedildi: " + userTokenError.getMessage());
         }
+    }
+
+    /**
+     * Servis token'ı yalnızca servisler arası uçlarda geçerlidir (docs/07: "SERVICE rolü dış uçlarda geçersizdir").
+     * Böylece dış uçlarda principal her zaman {@link AuthenticatedUser}'dır. {@code ..}, {@code %2e} gibi yol
+     * hileleri bu filtreden önce Spring Security'nin {@code StrictHttpFirewall}'ında reddedilir.
+     */
+    private static boolean isInternalPath(HttpServletRequest request) {
+        return UrlPathHelper.defaultInstance.getPathWithinApplication(request).startsWith(INTERNAL_PREFIX);
+    }
+
+    private void setAuthentication(HttpServletRequest request, Object principal, String authority) {
+        var authentication = UsernamePasswordAuthenticationToken.authenticated(
+                principal, null, List.of(new SimpleGrantedAuthority(authority)));
+        authentication.setDetails(detailsSource.buildDetails(request));
+
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
     }
 }

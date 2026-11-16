@@ -169,3 +169,6 @@ Servisler arası uçlar (`/internal/**`) gateway'de **yönlendirilmez**; yalnız
 | Metot | Yol (sahibi) | Çağıran | Açıklama |
 |---|---|---|---|
 | DELETE | `/internal/tasks/by-project/{projectId}` (task) | project-service outbox relay | Projenin tüm görevlerini siler; idempotent, her durumda 204 |
+| DELETE | `/internal/tasks/by-project/{projectId}/assignees/{userId}` (task) | project-service outbox relay | Projeden çıkarılan kişinin o projedeki atamalarını boşaltır (`assigneeId=null`, `version`+1); idempotent, her durumda 204 |
+
+task-service'in dahili uçları yalnızca servis token'ı (`SERVICE`) kabul eder.

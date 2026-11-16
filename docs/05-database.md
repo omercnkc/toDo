@@ -89,7 +89,7 @@ Kabul edildiğinde tek transaction'da: davet `ACCEPTED` olur + `project_members`
 | id | BIGINT | PK |
 | aggregate_type | VARCHAR(50) | NOT NULL (örn. `PROJECT`) |
 | aggregate_id | BIGINT | NOT NULL (silinen proje id'si; FK yok, proje artık yok) |
-| event_type | TINYINT UNSIGNED | NOT NULL (0=`PROJECT_DELETED`; yeni olaylar sona eklenir) |
+| event_type | TINYINT UNSIGNED | NOT NULL (0=`PROJECT_DELETED`, 1=`MEMBER_REMOVED`; yeni olaylar sona eklenir) |
 | payload | JSON | NULL (ek bilgi gerekirse) |
 | status | TINYINT UNSIGNED | NOT NULL, default 0 (0=`PENDING`, 1=`SENT`, 2=`FAILED`) |
 | attempts | INT | NOT NULL, default 0 |
@@ -133,7 +133,7 @@ Pozisyon değiştiren her işlem (oluşturma, durum değiştirme, taşıma, silm
 ## Silme / Bütünlük Kuralları
 - Kullanıcı silinmez, `enabled=false` yapılır (görev/proje referansları bozulmaz).
 - Proje arşivlenir; kalıcı silmede proje silme + `outbox_events` kaydı tek transaction'da yazılır, görevleri relay asenkron ve yeniden denemeli olarak temizler (en az bir kez teslim; task-service ucu idempotent).
-- Atanan kullanıcı projeden çıkarılırsa task-service'teki `assignee_id` null'lanır (dahili uç).
+- Atanan kullanıcı projeden çıkarılırsa task-service'teki `assignee_id` null'lanır: üye çıkarma ile aynı transaction'da `MEMBER_REMOVED` outbox olayı yazılır, relay `DELETE /internal/tasks/by-project/{id}/assignees/{userId}` ucunu çağırır (task-service kapalıyken de üye çıkarma başarılı olur).
 
 ## Başlangıç Verisi
 `auth_db` için tek bir varsayılan `ADMIN` kullanıcı (şifresi env ile verilir, repo'ya yazılmaz) migration yerine uygulama başlangıcında oluşturulur.
