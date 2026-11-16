@@ -51,10 +51,11 @@ Kullanıcının erişebildiği projeleri ve görev istatistiklerini Feign ile to
 
 ## Proje Kalıcı Silme – Outbox
 1. `DELETE /api/projects/{id}?permanent=true` → **tek transaction**: proje satırı silinir (üyeler/davetler `ON DELETE CASCADE`) + `outbox_events`'e `PROJECT_DELETED` kaydı (`PENDING`) yazılır. İstemciye 204 döner; görev temizliği asenkrondur (genelde birkaç saniye).
-2. Relay (`fixedDelay` 5 sn) `status=PENDING AND next_attempt_at <= now` kayıtlarından 20'lik parti alır (`SELECT ... FOR UPDATE SKIP LOCKED` → birden fazla instance'ta aynı kayıt iki kez işlenmez).
+2. Relay (`fixedDelay` 5 sn) `status=PENDING AND next_attempt_at <= now` kayıtlarından 20'lik parti alır (`SELECT ... FOR UPDATE SKIP LOCKED` → birden fazla instance'ta aynı kayıt iki kez işlenmez). Uygulama (Faz 4-E): parti kısa bir transaction'da kilitlenip `next_attempt_at` 5 dk ileri alınarak **sahiplenilir**, çağrılar transaction dışında yapılır (ağ beklenirken DB kilidi tutulmaz; relay çökerse kayıtlar 5 dk sonra yeniden denenir). Dolu parti gelirse beklemeden sonraki partiye geçilir.
 3. Her kayıt için `TaskClient` ile `DELETE /internal/tasks/by-project/{id}` çağrılır (servis JWT'si ile, bkz. 07).
-4. Başarı → `SENT`, `processed_at` doldurulur. Hata → `attempts+1`, `last_error` yazılır, `next_attempt_at = now + min(5 sn × 2^attempts, 10 dk)`. 10 denemeden sonra `FAILED` + ERROR log (ADMIN için ileride elle yeniden deneme ucu).
-5. Temizlik işi: 7 günden eski `SENT` kayıtları günlük silinir.
+4. Başarı → `SENT`, `processed_at` doldurulur. Hata → `attempts+1`, `last_error` yazılır, `next_attempt_at = now + min(5 sn × 2^attempts, 10 dk)`. 10 denemeden sonra `FAILED` + ERROR log (ADMIN için ileride elle yeniden deneme ucu). **İstisna:** task-service'e *ulaşılamıyorsa* (bağlantı reddi/zaman aşımı, Eureka'da örnek yok → 503) deneme sınırı uygulanmaz, 10 dk aralıkla denenmeye devam eder; `FAILED` yalnızca servisin yanıt verip hata döndüğü durumlar içindir. Böylece task-service ne kadar uzun kapalı kalırsa kalsın açılınca temizlik yapılır.
+5. Temizlik işi: 7 günden eski `SENT` kayıtları günlük silinir. (03:30; `FAILED` kayıtlar incelenmek üzere kalır.)
+6. Üye çıkarma da aynı yolu kullanır: `MEMBER_REMOVED` olayı (payload `{"userId"}`) → `DELETE /internal/tasks/by-project/{id}/assignees/{userId}`. Bilinen sınır: kişi çıkarıldıktan sonra relay çalışmadan önce (normalde birkaç saniye) projeye yeniden katılıp yeni bir görev atanırsa, o atama da boşaltılır.
 
 Tutarlılık: silme commit'inden sonra task-service'in üyelik kontrolü (Feign → project-service) 404 alır, yani silinmiş projeye yeni görev eklenemez; commit öncesi eklenmiş görevler relay temizliğiyle silinir. Dashboard yalnızca erişilebilir proje id'leri için istatistik çektiğinden temizlik beklenirken eski görevler görünmez.
 

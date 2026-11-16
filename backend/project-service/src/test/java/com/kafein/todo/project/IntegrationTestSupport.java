@@ -5,6 +5,7 @@ import com.kafein.todo.common.security.AuthenticatedUser;
 import com.kafein.todo.common.security.JwtService;
 import com.kafein.todo.common.security.Role;
 import com.kafein.todo.project.client.AuthClient;
+import com.kafein.todo.project.client.TaskClient;
 import com.kafein.todo.project.client.UserSummary;
 import com.kafein.todo.project.member.ProjectMember;
 import com.kafein.todo.project.member.ProjectMemberRepository;
@@ -59,6 +60,9 @@ public abstract class IntegrationTestSupport {
     protected ProjectMemberRepository members;
     @MockBean
     protected AuthClient authClient;
+    /** task-service yerine (outbox relay). */
+    @MockBean
+    protected TaskClient taskClient;
 
     protected AuthenticatedUser owner;
     protected AuthenticatedUser member;

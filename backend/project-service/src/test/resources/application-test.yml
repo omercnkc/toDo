@@ -2,6 +2,9 @@
 project:
   jwt:
     secret: test-secret-test-secret-test-secret-123
+  outbox:
+    # Relay testlerde zamanlanmaz; testler OutboxRelay'i doğrudan çağırır
+    scheduling-enabled: false
 
 eureka:
   client:

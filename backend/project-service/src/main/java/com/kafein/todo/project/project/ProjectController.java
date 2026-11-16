@@ -67,7 +67,7 @@ public class ProjectController {
         return projectService.update(user, id, request);
     }
 
-    /** OWNER/ADMIN: arşivler (204). {@code ?permanent=true} kalıcı silme Faz 4'te. */
+    /** OWNER/ADMIN: arşivler (204). {@code ?permanent=true}: kalıcı siler (204), görevler outbox ile asenkron temizlenir. */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void archive(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable long id,

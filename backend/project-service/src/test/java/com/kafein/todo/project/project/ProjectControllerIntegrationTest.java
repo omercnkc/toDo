@@ -217,16 +217,6 @@ class ProjectControllerIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    void kaliciSilmeHenuzYok() throws Exception {
-        long id = createProject("Kalıcı", false);
-
-        perform(delete("/projects/" + id + "?permanent=true"), owner)
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("PERMANENT_DELETE_NOT_AVAILABLE"));
-        assertThat(projects.existsById(id)).isTrue();
-    }
-
-    @Test
     void yetkisizArsivProjeyiDegistirmez() throws Exception {
         long id = createProject("Korunan", true);
 

@@ -7,11 +7,14 @@ import com.kafein.todo.project.access.ProjectAccessService;
 import com.kafein.todo.project.client.UserDirectory;
 import com.kafein.todo.project.client.UserSummary;
 import com.kafein.todo.project.member.dto.MemberResponse;
+import com.kafein.todo.project.outbox.OutboxEvent;
+import com.kafein.todo.project.outbox.OutboxEventRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 
@@ -23,11 +26,16 @@ public class MemberService {
     private final ProjectMemberRepository members;
     private final ProjectAccessService access;
     private final UserDirectory users;
+    private final OutboxEventRepository outbox;
+    private final Clock clock;
 
-    public MemberService(ProjectMemberRepository members, ProjectAccessService access, UserDirectory users) {
+    public MemberService(ProjectMemberRepository members, ProjectAccessService access, UserDirectory users,
+                         OutboxEventRepository outbox, Clock clock) {
         this.members = members;
         this.access = access;
         this.users = users;
+        this.outbox = outbox;
+        this.clock = clock;
     }
 
     /**
@@ -49,7 +57,8 @@ public class MemberService {
 
     /**
      * OWNER/ADMIN üye çıkarır. OWNER çıkarılamaz (409); arşivlenmiş projede üyelik değişmez (409).
-     * Faz 4: çıkarılan kişiye atanmış görevlerin {@code assignee_id}'si task-service'te boşaltılacak.
+     * Aynı transaction'da {@code MEMBER_REMOVED} outbox kaydı yazılır: relay, kişinin bu projedeki görev
+     * atamalarını task-service'te boşaltır (task-service kapalıyken de üye çıkarma başarılı olur).
      */
     @Transactional
     public void remove(AuthenticatedUser user, long projectId, long memberUserId) {
@@ -63,6 +72,7 @@ public class MemberService {
             throw ApiException.conflict("OWNER_CANNOT_BE_REMOVED", "Proje sahibi projeden çıkarılamaz");
         }
         members.delete(member);
+        outbox.save(OutboxEvent.memberRemoved(projectId, memberUserId, clock.instant()));
         log.info("Kullanıcı {} proje {}'den üye {}'i çıkardı", user.id(), projectId, memberUserId);
     }
 }

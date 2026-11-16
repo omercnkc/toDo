@@ -9,6 +9,8 @@ import com.kafein.todo.project.access.ProjectAccessService;
 import com.kafein.todo.project.member.MemberRole;
 import com.kafein.todo.project.member.ProjectMember;
 import com.kafein.todo.project.member.ProjectMemberRepository;
+import com.kafein.todo.project.outbox.OutboxEvent;
+import com.kafein.todo.project.outbox.OutboxEventRepository;
 import com.kafein.todo.project.project.dto.CreateProjectRequest;
 import com.kafein.todo.project.project.dto.ProjectResponse;
 import com.kafein.todo.project.project.dto.UpdateProjectRequest;
@@ -20,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -35,11 +38,16 @@ public class ProjectService {
     private final ProjectRepository projects;
     private final ProjectMemberRepository members;
     private final ProjectAccessService access;
+    private final OutboxEventRepository outbox;
+    private final Clock clock;
 
-    public ProjectService(ProjectRepository projects, ProjectMemberRepository members, ProjectAccessService access) {
+    public ProjectService(ProjectRepository projects, ProjectMemberRepository members, ProjectAccessService access,
+                          OutboxEventRepository outbox, Clock clock) {
         this.projects = projects;
         this.members = members;
         this.access = access;
+        this.outbox = outbox;
+        this.clock = clock;
     }
 
     /** Proje ve oluşturanın OWNER üyeliği tek transaction'da. */
@@ -99,15 +107,21 @@ public class ProjectService {
     }
 
     /**
-     * Arşivleme (yumuşak silme). İdempotent: zaten arşivdeyse de 204.
-     * Kalıcı silme (görevlerin outbox ile temizlenmesi) Faz 4'te.
+     * {@code permanent=false}: arşivleme (yumuşak silme), idempotent: zaten arşivdeyse de 204.
+     * <p>
+     * {@code permanent=true}: kalıcı silme (docs/04 "Proje Kalıcı Silme – Outbox"). Tek transaction'da proje satırı
+     * silinir (üyeler/davetler {@code ON DELETE CASCADE}) ve {@code PROJECT_DELETED} outbox kaydı yazılır; görevleri
+     * relay asenkron temizler. Geri alınamaz; arşivde olması şart değildir.
      */
     @Transactional
     public void archive(AuthenticatedUser user, long projectId, boolean permanent) {
-        if (permanent) {
-            throw ApiException.badRequest("PERMANENT_DELETE_NOT_AVAILABLE", "Kalıcı silme henüz desteklenmiyor");
-        }
         Project project = access.requireManager(projectId, user).project();
+        if (permanent) {
+            projects.delete(project);
+            outbox.save(OutboxEvent.projectDeleted(projectId, clock.instant()));
+            log.info("Kullanıcı {} proje {}'i kalıcı sildi; görev temizliği outbox'a yazıldı", user.id(), projectId);
+            return;
+        }
         if (!project.isArchived()) {
             project.changeStatus(ProjectStatus.ARCHIVED);
             log.info("Kullanıcı {} proje {}'i arşivledi", user.id(), projectId);

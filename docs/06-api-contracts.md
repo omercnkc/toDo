@@ -90,7 +90,8 @@ Proje uçları uygulama notları (3-B):
 
 Üye uçları uygulama notları (3-C):
 - `GET /projects/{id}/members` → `[{userId, email, fullName, enabled, role, joinedAt}]`, önce OWNER sonra katılma sırası, sayfasız. Ad/e-posta/aktiflik auth-service'ten tek toplu `lookup` çağrısıyla (200'lük parçalar). auth-service'e ulaşılamazsa liste yine 200 döner, bu üç alan `null` olur (arayüz "Kullanıcı #id" gösterir).
-- `DELETE /projects/{id}/members/{userId}` → 204. Hatalar: üye değil 404 `MEMBER_NOT_FOUND`, OWNER 409 `OWNER_CANNOT_BE_REMOVED`, arşivlenmiş proje 409 `PROJECT_ARCHIVED`. Faz 4: çıkarılan kişiye atanmış görevlerin `assigneeId`'si boşaltılacak.
+- `DELETE /projects/{id}/members/{userId}` → 204. Hatalar: üye değil 404 `MEMBER_NOT_FOUND`, OWNER 409 `OWNER_CANNOT_BE_REMOVED`, arşivlenmiş proje 409 `PROJECT_ARCHIVED`. Çıkarılan kişiye bu projede atanmış görevlerin `assigneeId`'si outbox ile asenkron boşaltılır (genelde birkaç saniye).
+- `DELETE /projects/{id}?permanent=true` → 204 (OWNER/ADMIN; arşivde olması şart değil; geri alınamaz). Proje, üyeler ve davetler hemen silinir; görevler outbox ile asenkron temizlenir. Olmayan proje 404 `PROJECT_NOT_FOUND`.
 - Dahili uçlar (gateway'den erişilemez; geçerli bir kullanıcı token'ı yeterli): `GET /internal/projects/{id}/members/{userId}` → `{projectId, userId, role, projectStatus}` veya 404 `MEMBERSHIP_NOT_FOUND`; `GET /internal/projects/accessible?userId=` → proje id listesi.
 - auth-service çağrıları hata verirse (davet gönderme gibi adın zorunlu olduğu yerlerde) 503 `USER_SERVICE_UNAVAILABLE`. Feign zaman aşımları: bağlantı 2 sn, okuma 5 sn.
 
