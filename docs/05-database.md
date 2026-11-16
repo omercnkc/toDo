@@ -120,8 +120,15 @@ Kabul edildiğinde tek transaction'da: davet `ACCEPTED` olur + `project_members`
 İndeksler: `(project_id, status, position)`, `(assignee_id, status)`, `(due_date)`, `(project_id, priority)`.
 Arama (`q`) ilk sürümde `LIKE %q%`; veri büyürse FULLTEXT indeks (`title`, `description`) eklenir.
 
+**task_board_locks** (proje bazlı board kilidi)
+| Kolon | Tip | Kısıt |
+|---|---|---|
+| project_id | BIGINT | PK |
+
+Pozisyon değiştiren her işlem (oluşturma, durum değiştirme, taşıma, silme) transaction başında `INSERT … ON DUPLICATE KEY UPDATE` ile projenin satırını kilitler; aynı projedeki işlemler sıraya girer, farklı projeler birbirini beklemez. task_db'de proje tablosu olmadığı için kilit satırı ayrı tabloda.
+
 ## Sıralama (position) Stratejisi
-`move` isteğinde hedef kolon ve hedef index gelir. Hedef kolondaki `position >= index` olan kayıtlar +1 kaydırılır, görev yeni yerine yazılır; kaynak kolon boşluğu kapatılır. İşlem tek transaction'da, proje bazlı kilit/optimistic lock (`@Version`) ile yapılır.
+`move` isteğinde hedef kolon ve hedef index gelir. Hedef kolondaki `position >= index` olan kayıtlar +1 kaydırılır, görev yeni yerine yazılır; kaynak kolon boşluğu kapatılır. İşlem tek transaction'da, proje bazlı kilit (`task_board_locks`) altında yapılır; görev içeriği düzenlemelerinde ayrıca optimistic lock (`@Version`, çakışmada 409 `TASK_CONFLICT`).
 
 ## Silme / Bütünlük Kuralları
 - Kullanıcı silinmez, `enabled=false` yapılır (görev/proje referansları bozulmaz).

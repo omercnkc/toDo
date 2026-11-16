@@ -128,6 +128,16 @@ Davet uçları uygulama notları (3-D):
 | DELETE | `/api/tasks/{id}` | Reporter / OWNER / ADMIN | Sil |
 | GET | `/api/tasks/board?projectId=` | Proje üyesi | `{TODO:[..],IN_PROGRESS:[..],DONE:[..]}` pozisyona göre sıralı |
 
+Kurallar (Faz 4-B):
+- Yetki her istekte project-service'e sorulur. Üye değil → 403 `PROJECT_ACCESS_DENIED` (proje var mı yok mu söylenmez); üye olmayan ADMIN erişir, proje yoksa 404 `PROJECT_NOT_FOUND`; project-service'e ulaşılamazsa 503 `PROJECT_SERVICE_UNAVAILABLE`.
+- Arşivlenmiş projede görevler okunur; oluşturma/düzenleme/durum/silme 409 `PROJECT_ARCHIVED`.
+- `assigneeId` proje üyesi olmalı → aksi halde 400 `ASSIGNEE_NOT_MEMBER` (`fieldErrors[assigneeId]`). Boş = atanmamış.
+- `POST`: `priority` boşsa `MEDIUM`; görev `TODO` kolonunun sonuna eklenir. `PUT` tüm düzenlenebilir alanları değiştirir (gönderilmeyen `assigneeId`/`dueDate` boşalır), durum/sırayı değiştirmez.
+- `PATCH /status`: görev hedef kolonun sonuna geçer, eski kolondaki boşluk kapanır; aynı durumsa değişiklik yok.
+- `DELETE`: reporter değil ve OWNER/ADMIN değilse 403 `TASK_DELETE_FORBIDDEN`; olmayan görev 404 `TASK_NOT_FOUND`.
+- Yanıtta ek alan `canDelete` (sil düğmesi gösterilsin mi; yetki sunucuda yeniden kontrol edilir).
+- Faz 4-B'de `GET /api/tasks` yalnızca `projectId` (zorunlu), `page`, `size` alır, en yeniler önce; filtreler Faz 5'te.
+
 **Liste filtreleri** (`GET /api/tasks`): `projectId` (zorunlu veya "benim projelerim"), `status`, `priority`, `assigneeId`, `q` (başlık/açıklama), `dueFrom`, `dueTo`, `overdue=true`, `sort` (`dueDate|priority|createdAt|title`), `page`, `size`.
 
 Görev yanıtı:
