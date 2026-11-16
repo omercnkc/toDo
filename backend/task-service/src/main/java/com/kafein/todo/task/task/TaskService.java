@@ -15,6 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -90,26 +94,72 @@ public class TaskService {
         return TaskResponse.from(updated, projectAccess);
     }
 
+    /** Board: üç kolon da (boşsa boş liste), her biri pozisyona göre sıralı. */
+    public Map<TaskStatus, List<TaskResponse>> board(AuthenticatedUser user, long projectId) {
+        ProjectAccess projectAccess = access.require(user, projectId);
+        Map<TaskStatus, List<TaskResponse>> columns = new EnumMap<>(TaskStatus.class);
+        for (TaskStatus status : TaskStatus.values()) {
+            columns.put(status, new ArrayList<>());
+        }
+        for (Task task : tasks.findByProjectIdOrderByStatusAscPositionAsc(projectId)) {
+            columns.get(task.getStatus()).add(TaskResponse.from(task, projectAccess));
+        }
+        return columns;
+    }
+
     /** Görevi hedef kolonun sonuna taşır; aynı kolonsa değişiklik yapmaz. */
     public TaskResponse changeStatus(AuthenticatedUser user, long taskId, TaskStatus target) {
+        return moveInternal(user, taskId, target, null);
+    }
+
+    /**
+     * Kanban sürükle-bırak: görevi {@code target} kolonunun {@code position} sırasına koyar. Sıra kolon boyunu
+     * aşarsa kolonun sonuna sınırlanır. Kolon içi ve kolonlar arası taşımada diğer görevler kaydırılır,
+     * pozisyonlar boşluksuz kalır.
+     */
+    public TaskResponse move(AuthenticatedUser user, long taskId, TaskStatus target, int position) {
+        return moveInternal(user, taskId, target, position);
+    }
+
+    /** {@code requestedPosition == null}: hedef kolonun sonu, görev zaten o kolondaysa yerinde kalır. */
+    private TaskResponse moveInternal(AuthenticatedUser user, long taskId, TaskStatus target,
+                                      Integer requestedPosition) {
         Task current = find(taskId);
         ProjectAccess projectAccess = access.requireWritable(user, current.getProjectId());
 
-        Task changed = tx.execute(status -> {
+        Task moved = tx.execute(status -> {
             long projectId = current.getProjectId();
             boardLock.lock(projectId);
             Task task = find(taskId);
-            if (task.getStatus() == target) {
+            TaskStatus fromStatus = task.getStatus();
+            int from = task.getPosition();
+            boolean sameColumn = fromStatus == target;
+            if (sameColumn && requestedPosition == null) {
                 return task;
             }
-            TaskStatus fromStatus = task.getStatus();
-            int fromPosition = task.getPosition();
-            task.placeAt(target, tasks.findMaxPosition(projectId, target) + 1);
-            tasks.saveAndFlush(task);
-            tasks.closeGap(projectId, fromStatus, fromPosition);
-            return task;
+
+            // Hedef kolonun boyu (görev zaten oradaysa kendisi hariç) = verilebilecek en büyük sıra
+            int targetSize = tasks.findMaxPosition(projectId, target) + (sameColumn ? 0 : 1);
+            int to = requestedPosition == null ? targetSize : Math.min(requestedPosition, targetSize);
+            if (sameColumn && to == from) {
+                return task;
+            }
+
+            // Toplu güncellemeler persistence context'i temizler; görev ayrıca kaydedilir (merge)
+            if (sameColumn) {
+                if (to < from) {
+                    tasks.shift(projectId, target, to, from - 1, +1);   // aradakiler aşağı
+                } else {
+                    tasks.shift(projectId, target, from + 1, to, -1);   // aradakiler yukarı
+                }
+            } else {
+                tasks.closeGap(projectId, fromStatus, from);
+                tasks.shift(projectId, target, to, Integer.MAX_VALUE, +1); // hedefte yer aç
+            }
+            task.placeAt(target, to);
+            return tasks.saveAndFlush(task);
         });
-        return TaskResponse.from(changed, projectAccess);
+        return TaskResponse.from(moved, projectAccess);
     }
 
     /** Reporter / OWNER / ADMIN. Kolondaki boşluk kapatılır. */

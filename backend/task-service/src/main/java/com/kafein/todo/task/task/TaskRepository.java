@@ -31,4 +31,14 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             + " where t.projectId = :projectId and t.status = :status and t.position > :position")
     int closeGap(@Param("projectId") long projectId, @Param("status") TaskStatus status,
                  @Param("position") int position);
+
+    /**
+     * Kolonda {@code [from, to]} aralığındaki görevleri {@code delta} kadar kaydırır (taşımada hedefe yer açmak
+     * veya kolon içi taşımada aradakileri bir yana itmek için). Board kilidi altında çağrılır.
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Task t set t.position = t.position + :delta"
+            + " where t.projectId = :projectId and t.status = :status and t.position between :from and :to")
+    int shift(@Param("projectId") long projectId, @Param("status") TaskStatus status,
+              @Param("from") int from, @Param("to") int to, @Param("delta") int delta);
 }

@@ -4,6 +4,7 @@ import com.kafein.todo.common.dto.PageResponse;
 import com.kafein.todo.common.security.AuthenticatedUser;
 import com.kafein.todo.task.task.dto.ChangeStatusRequest;
 import com.kafein.todo.task.task.dto.CreateTaskRequest;
+import com.kafein.todo.task.task.dto.MoveTaskRequest;
 import com.kafein.todo.task.task.dto.TaskResponse;
 import com.kafein.todo.task.task.dto.UpdateTaskRequest;
 import jakarta.validation.Valid;
@@ -22,6 +23,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
 
 /** Görev uçları (docs/06 "task-service"). Yetki: proje üyesi veya ADMIN; silme reporter / OWNER / ADMIN. */
 @RestController
@@ -53,6 +57,13 @@ public class TaskController {
         return taskService.list(user, projectId, page, size);
     }
 
+    /** Kanban: {@code {"TODO":[..],"IN_PROGRESS":[..],"DONE":[..]}}, her kolon pozisyona göre sıralı. */
+    @GetMapping("/board")
+    public Map<TaskStatus, List<TaskResponse>> board(@AuthenticationPrincipal AuthenticatedUser user,
+                                                     @RequestParam long projectId) {
+        return taskService.board(user, projectId);
+    }
+
     @GetMapping("/{id}")
     public TaskResponse get(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable long id) {
         return taskService.get(user, id);
@@ -69,6 +80,13 @@ public class TaskController {
     public TaskResponse changeStatus(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable long id,
                                      @Valid @RequestBody ChangeStatusRequest request) {
         return taskService.changeStatus(user, id, request.status());
+    }
+
+    /** Kanban sürükle-bırak: hedef kolon + kolondaki sıra; diğer görevler kaydırılır. */
+    @PatchMapping("/{id}/move")
+    public TaskResponse move(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable long id,
+                             @Valid @RequestBody MoveTaskRequest request) {
+        return taskService.move(user, id, request.status(), request.position());
     }
 
     @DeleteMapping("/{id}")

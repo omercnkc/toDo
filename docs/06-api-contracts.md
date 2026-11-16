@@ -135,6 +135,8 @@ Kurallar (Faz 4-B):
 - `POST`: `priority` boşsa `MEDIUM`; görev `TODO` kolonunun sonuna eklenir. `PUT` tüm düzenlenebilir alanları değiştirir (gönderilmeyen `assigneeId`/`dueDate` boşalır), durum/sırayı değiştirmez.
 - `PATCH /status`: görev hedef kolonun sonuna geçer, eski kolondaki boşluk kapanır; aynı durumsa değişiklik yok.
 - `DELETE`: reporter değil ve OWNER/ADMIN değilse 403 `TASK_DELETE_FORBIDDEN`; olmayan görev 404 `TASK_NOT_FOUND`.
+- `PATCH /move` (Faz 4-C): `{status, position}`; `position` ≥ 0, kolon boyunu aşarsa kolonun sonuna sınırlanır. Kolon içinde aradakiler bir yana itilir; kolonlar arasında kaynak boşluk kapanır, hedefte yer açılır. Yanıt: taşınan görev.
+- `GET /board` (Faz 4-C): üç anahtar her zaman var (boş kolon `[]`), her kolon `position`'a göre sıralı. Arşivde de okunur.
 - Yanıtta ek alan `canDelete` (sil düğmesi gösterilsin mi; yetki sunucuda yeniden kontrol edilir).
 - Faz 4-B'de `GET /api/tasks` yalnızca `projectId` (zorunlu), `page`, `size` alır, en yeniler önce; filtreler Faz 5'te.
 
