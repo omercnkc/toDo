@@ -72,6 +72,16 @@ Uygulama notları (3-G):
 - Navbar rozeti: açılışta (`interval(60 sn).pipe(startWith(0))` — `timer(0)` ilk değeri bir sonraki turda verir), her sayfa değişiminde ve sekmeye dönülünce tazelenir; sekme arka plandayken istek atılmaz. Layout kapanınca (çıkış) sayı sıfırlanır. 0 iken rozet görünmez; ekran okuyucu için "bekleyen davet" metni.
 - Davetlerim: kabul edilen davet listeden kalkar ve "Projeye git" bağlantısıyla yeşil uyarı olarak kalır; red onay ister (24 saat uyarısı). 409 (davet geri çekilmiş / proje arşivde) → sunucu mesajı + liste tazelenir. Panel (dashboard) bekleyen davet varsa uyarı gösterir (navbar'ın tazelediği sayıyı kullanır, ayrı istek yok).
 
+Uygulama notları (4-F):
+- `@angular/cdk` 13.3 (yalnızca lazy `tasks` paketinde, ~72 kB; başlangıç paketi değişmedi). `TaskService` + `task.model.ts` (`Board`, etiketler, `isOverdue`, `localToday` — `toISOString` UTC verdiği için yerel gün ayrı hesaplanır).
+- Route: `projects` modülünde çocuksuz `:id` yalnızca tam `/projects/5` ile eşleşir; sondaki `{ path: ':id', loadChildren: TasksModule }` `/projects/5/board`'u alır. `:id` üst route'ta olduğu için pano `route.parent.paramMap` okur. Proje detayında herkese "Kanban panosu" düğmesi.
+- Sürükle-bırak `cdkDropListGroup` ile (3 kolon birbirine bağlı); kolonun `cdkDropListData`'sı durumu. Sıra hesabı saf fonksiyonda (`board-moves.ts` `moveTask`: sunucudaki `move` ile aynı kural, kolon boyuna sınırlama, değişmeyen nesneler korunur).
+- İyimser güncelleme: board hemen değişir, taşımalar `concatMap` ile **sırayla** gönderilir (hızlı art arda sürüklemede sunucu da aynı sırayı görür). Hata → bekleyen başka taşıma yoksa önceki hâle dönülür; her durumda kuyruk boşalınca board sunucudan yenilenir (gerçek durum sunucuda). Sunucu görevi beklenenden farklı yere koyduysa (arada başkası değiştirdi) yine yenilenir. Taşıma sürerken gelen yenileme yanıtı yok sayılır. 4xx mesajı bildirimde; 0/5xx/403'ü `ErrorInterceptor` gösterir.
+- Kart: başlık, öncelik rozeti (Bootstrap 5.2'de `*-subtle` yok → kendi açık renkleri), bitiş tarihi (gecikmişse kırmızı + "gecikti"), atanan avatarı (ad proje üye listesinden; listede yoksa "Kullanıcı #id"). Üye listesi alınamazsa pano yine açılır.
+- Arşivde sürükleme kapalı + uyarı. Erişim yok / proje yok sayfada açıklanır.
+- Responsive: masaüstünde 3 eşit kolon; dar ekranda kolonlar %85 genişlikte yatay kayar (`scroll-snap-type: x proximity` — `mandatory`, CDK'nın sürüklerken yaptığı otomatik kaydırmayı geri yapıştırabilir), `cdkScrollable` ile sürüklerken pano otomatik kayar. Dokunmatikte sürükleme 250 ms basılı tutunca başlar (kaydırmayla karışmasın).
+- Erişilebilirlik notu: sürükle-bırak fare/dokunmatik içindir; klavyeyle durum değiştirme 4-G'deki görev modalında.
+
 ## Reaktif Yapı (RxJS)
 - Servis tabanlı state: `BehaviorSubject` + `asObservable()`; ağır kütüphane (NgRx) ilk sürümde yok.
 - Arama kutusu: `valueChanges.pipe(debounceTime(300), distinctUntilChanged(), switchMap(...))`.
@@ -86,7 +96,7 @@ Uygulama notları (3-G):
 - Abonelik sızıntısı yok: `async` pipe tercih edilir, aksi halde `takeUntil(destroy$)`.
 
 ## Kanban
-- `@angular/cdk/drag-drop`: 3 kolon (`cdkDropList`), `cdkDropListConnectedTo` ile bağlı.
+- `@angular/cdk/drag-drop`: 3 kolon (`cdkDropList`), `cdkDropListGroup` ile bağlı.
 - `drop` olayında **iyimser güncelleme**: UI hemen güncellenir, `PATCH /tasks/{id}/move` çağrılır, hata olursa eski duruma geri alınır + toast.
 - Kolon başlıkları: Yapılacak / Devam Ediyor / Tamamlandı; kolonda görev sayısı rozeti.
 - Kart: başlık, öncelik rozeti, atanan avatarı, bitiş tarihi (gecikmişse kırmızı).

@@ -1,0 +1,108 @@
+// Masaüstünde 3 eşit kolon; dar ekranda yatay kaydırma, kolon başına bir "sayfa" (scroll-snap)
+.kanban-board {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  // proximity: "mandatory" sürükleme sırasındaki otomatik kaydırmayı geri yapıştırabilir
+  scroll-snap-type: x proximity;
+  padding-bottom: 0.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kanban-column {
+  flex: 0 0 85%;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bs-gray-200);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  min-width: 0;
+
+  @media (min-width: 576px) {
+    flex-basis: 60%;
+  }
+
+  @media (min-width: 992px) {
+    flex: 1 1 0;
+  }
+}
+
+.kanban-column-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.kanban-list {
+  flex: 1;
+  // Boş kolon da bırakma alanı olsun
+  min-height: 8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kanban-card {
+  cursor: grab;
+  border: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.kanban-card-title {
+  overflow-wrap: anywhere;
+}
+
+.kanban-empty {
+  margin: auto 0;
+  padding: 1rem 0;
+}
+
+.priority-badge {
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+// Bootstrap 5.2'de *-subtle sınıfları yok; kontrastlı açık zeminler
+.priority-HIGH {
+  background-color: #f8d7da;
+  color: #842029;
+}
+
+.priority-MEDIUM {
+  background-color: #fff3cd;
+  color: #664d03;
+}
+
+.priority-LOW {
+  background-color: #e2e3e5;
+  color: #41464b;
+}
+
+// ---------- CDK drag-drop ----------
+
+.kanban-placeholder {
+  min-height: 3.5rem;
+  border: 2px dashed var(--bs-gray-400);
+  border-radius: 0.375rem;
+  background: transparent;
+}
+
+// Diğer kartlar yer açarken kayarak hareket etsin
+.kanban-list.cdk-drop-list-dragging .kanban-card:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.cdk-drag-animating {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// Sürüklenen kopya body'ye eklenir: bileşen stilinin ona ulaşması için ::ng-deep
+::ng-deep .cdk-drag-preview.kanban-card {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.18);
+  cursor: grabbing;
+}

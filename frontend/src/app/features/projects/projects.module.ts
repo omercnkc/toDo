@@ -8,12 +8,16 @@ import { ProjectDetailComponent } from './project-detail/project-detail.componen
 import { ProjectFormComponent } from './project-form/project-form.component';
 import { ProjectListComponent } from './project-list/project-list.component';
 
-/** `new`, `:id`'den önce gelmeli. */
+/**
+ * `new`, `:id`'den önce gelmeli. `:id/board` gibi görev sayfaları ayrı lazy modülde (`TasksModule`);
+ * çocuksuz `:id` route'u yalnızca tam `/projects/5` ile eşleştiği için `/projects/5/board` son route'a düşer.
+ */
 const routes: Routes = [
   { path: '', component: ProjectListComponent },
   { path: 'new', component: ProjectFormComponent },
   { path: ':id', component: ProjectDetailComponent },
   { path: ':id/edit', component: ProjectFormComponent },
+  { path: ':id', loadChildren: () => import('../tasks/tasks.module').then((m) => m.TasksModule) },
 ];
 
 /** /projects (lazy): liste, oluşturma/düzenleme, detay (üyeler ve davetler). */

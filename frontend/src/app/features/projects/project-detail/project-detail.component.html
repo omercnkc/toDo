@@ -42,12 +42,15 @@
         <span>Oluşturuldu {{ project.createdAt | date: 'dd.MM.yyyy' }}</span>
       </div>
     </div>
-    <div *ngIf="project.canManage" class="d-flex flex-wrap gap-2">
-      <ng-container *ngIf="project.status === 'ACTIVE'; else archivedActions">
-        <a [routerLink]="['/projects', project.id, 'edit']" class="btn btn-outline-primary">Düzenle</a>
-        <button type="button" class="btn btn-outline-secondary" [disabled]="busy.archive" (click)="archive()">
-          Arşivle
-        </button>
+    <div class="d-flex flex-wrap gap-2">
+      <a [routerLink]="['/projects', project.id, 'board']" class="btn btn-primary">Kanban panosu</a>
+      <ng-container *ngIf="project.canManage">
+        <ng-container *ngIf="project.status === 'ACTIVE'; else archivedActions">
+          <a [routerLink]="['/projects', project.id, 'edit']" class="btn btn-outline-primary">Düzenle</a>
+          <button type="button" class="btn btn-outline-secondary" [disabled]="busy.archive" (click)="archive()">
+            Arşivle
+          </button>
+        </ng-container>
       </ng-container>
       <ng-template #archivedActions>
         <button type="button" class="btn btn-success" [disabled]="busy.archive" (click)="restore()">
