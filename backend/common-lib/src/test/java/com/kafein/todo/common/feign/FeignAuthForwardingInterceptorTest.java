@@ -1,4 +1,4 @@
-package com.kafein.todo.project.client;
+package com.kafein.todo.common.feign;
 
 import feign.RequestTemplate;
 import org.junit.jupiter.api.AfterEach;

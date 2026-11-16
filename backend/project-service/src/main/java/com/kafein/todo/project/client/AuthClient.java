@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * auth-service'in servisler arası uçları (docs/04 "AuthClient"). Adres Eureka'dan ({@code lb://auth-service});
- * kullanıcının token'ı {@link FeignAuthForwardingInterceptor} ile iletilir.
+ * kullanıcının token'ı {@link com.kafein.todo.common.feign.FeignAuthForwardingInterceptor} ile iletilir.
  * <p>
  * Doğrudan kullanılmaz: hata dönüşümü ve 200'lük parçalama {@link UserDirectory}'de.
  */

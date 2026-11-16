@@ -114,6 +114,7 @@ Kabul edildiğinde tek transaction'da: davet `ACCEPTED` olur + `project_members`
 | reporter_id | BIGINT | NOT NULL |
 | due_date | DATE | NULL |
 | position | INT | NOT NULL (kolon içi sıra, 0'dan başlar) |
+| version | BIGINT | NOT NULL, default 0 (optimistic lock, `@Version`) |
 | created_at / updated_at | DATETIME(6) | NOT NULL |
 
 İndeksler: `(project_id, status, position)`, `(assignee_id, status)`, `(due_date)`, `(project_id, priority)`.

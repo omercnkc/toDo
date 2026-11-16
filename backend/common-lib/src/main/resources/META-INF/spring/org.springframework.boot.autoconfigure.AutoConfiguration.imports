@@ -1,1 +1,2 @@
 com.kafein.todo.common.web.CommonWebAutoConfiguration
+com.kafein.todo.common.feign.CommonFeignAutoConfiguration

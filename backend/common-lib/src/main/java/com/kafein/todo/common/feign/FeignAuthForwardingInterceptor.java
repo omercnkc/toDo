@@ -1,20 +1,18 @@
-package com.kafein.todo.project.client;
+package com.kafein.todo.common.feign;
 
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
-import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * Servisler arası çağrıya kullanıcının {@code Authorization} header'ını ekler (docs/07: kullanıcı bağlamı korunur).
- * Kullanıcı isteği dışında (zamanlanmış işler) header yoktur; o çağrılar Faz 4'te servis JWT'si kullanacak.
+ * Kullanıcı isteği dışında (zamanlanmış işler) header yoktur; o çağrılar servis JWT'si kullanır (Faz 4-D).
  * <p>
- * Not: task-service ve dashboard-service de aynısına ihtiyaç duyunca common-lib'e taşınacak.
+ * OpenFeign kullanan servlet servislerine {@link CommonFeignAutoConfiguration} ile otomatik eklenir.
  */
-@Component
 public class FeignAuthForwardingInterceptor implements RequestInterceptor {
 
     @Override

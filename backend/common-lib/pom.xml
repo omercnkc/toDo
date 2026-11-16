@@ -75,6 +75,12 @@
             <artifactId>jakarta.validation-api</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Feign token iletme interceptor'ı (CommonFeignAutoConfiguration); sürüm Spring Cloud BOM'undan -->
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-core</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
