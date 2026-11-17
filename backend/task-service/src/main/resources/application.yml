@@ -44,6 +44,8 @@ task:
   jwt:
     # auth-service ile aynı anahtar; bu servis token üretmez, yalnızca doğrular. Boşsa servis açılmaz.
     secret: ${JWT_SECRET:}
+  # "Bugün" (gecikmiş görev filtresi) bu saat dilimine göre hesaplanır
+  time-zone: ${TASK_TIME_ZONE:Europe/Istanbul}
 
 eureka:
   client:

@@ -118,7 +118,8 @@ Kabul edildiğinde tek transaction'da: davet `ACCEPTED` olur + `project_members`
 | created_at / updated_at | DATETIME(6) | NOT NULL |
 
 İndeksler: `(project_id, status, position)`, `(assignee_id, status)`, `(due_date)`, `(project_id, priority)`.
-Arama (`q`) ilk sürümde `LIKE %q%`; veri büyürse FULLTEXT indeks (`title`, `description`) eklenir.
+Arama (`q`) ilk sürümde `LIKE %q%`; veri büyürse FULLTEXT indeks (`title`, `description`) eklenir (ölçüm Faz 5-B'de).
+`title` ve `description` kolonları `utf8mb4_tr_0900_ai_ci` (`V3`, Faz 5-A): arama ve başlığa göre sıralama Türkçe kurallarla (I ↔ ı, İ ↔ i; Türk alfabesi sırası), büyük/küçük harf ve diğer aksanlar duyarsız. Tablonun geri kalanı `utf8mb4_0900_ai_ci`.
 
 **task_board_locks** (proje bazlı board kilidi)
 | Kolon | Tip | Kısıt |

@@ -139,9 +139,19 @@ Kurallar (Faz 4-B):
 - `PATCH /move` (Faz 4-C): `{status, position}`; `position` ≥ 0, kolon boyunu aşarsa kolonun sonuna sınırlanır. Kolon içinde aradakiler bir yana itilir; kolonlar arasında kaynak boşluk kapanır, hedefte yer açılır. Yanıt: taşınan görev.
 - `GET /board` (Faz 4-C): üç anahtar her zaman var (boş kolon `[]`), her kolon `position`'a göre sıralı. Arşivde de okunur.
 - Yanıtta ek alan `canDelete` (sil düğmesi gösterilsin mi; yetki sunucuda yeniden kontrol edilir).
-- Faz 4-B'de `GET /api/tasks` yalnızca `projectId` (zorunlu), `page`, `size` alır, en yeniler önce; filtreler Faz 5'te.
+**Liste filtreleri** (`GET /api/tasks`, Faz 5-A): filtreler VE ile, çok değerli bir filtrenin değerleri VEYA ile bağlanır.
+| Parametre | Açıklama |
+|---|---|
+| `projectId` | Zorunlu (Faz 5-B'de boşsa "erişebildiğim tüm projeler") |
+| `status`, `priority` | Çok değerli: `status=TODO,DONE` veya `status=TODO&status=DONE`; büyük/küçük harf duyarsız |
+| `assigneeId` | Kullanıcı id'si veya `none` (atanmamışlar) |
+| `q` | Başlık **veya** açıklamada "içerir"; `%` `_` joker sayılmaz; Türkçe kurallarla büyük/küçük harf ve aksan duyarsız (`IŞIK` = `ışık`, `istanbul` = `İstanbul`, `resume` = `Résumé`; Türkçede `I`'nın küçüğü `ı` olduğu için `ISTANBUL` ≠ `İstanbul`, frontend'deki `tr-TR` filtreyle aynı). En fazla 200 karakter |
+| `dueFrom`, `dueTo` | `YYYY-AA-GG`, iki uç dahil; bitiş tarihi olmayan görevler elenir; `dueFrom > dueTo` → hata |
+| `overdue` | `true` → bitiş tarihi bugünden önce ve durumu `DONE` olmayanlar ("bugün" `task.time-zone`'a göre, varsayılan `Europe/Istanbul`); `false`/boş → filtre yok |
+| `sort` | `alan[,asc\|desc]` (yön yoksa artan), tekrarlanabilir veya tek değerde art arda (`sort=priority,desc,title`). Alanlar: `dueDate`, `priority`, `createdAt`, `title`, `status`; aynı alan iki kez verilemez. Varsayılan `createdAt,desc`. Bitiş tarihi olmayanlar iki yönde de sonda; `title` Türk alfabesine göre (c < ç, s < ş). Son anahtar her zaman `id,desc` (eşit değerlerde sayfalar arası tekrar/atlama olmaz) |
+| `page`, `size` | `page` ≥ 0, `size` 1–100 (varsayılan 20) |
 
-**Liste filtreleri** (`GET /api/tasks`): `projectId` (zorunlu veya "benim projelerim"), `status`, `priority`, `assigneeId`, `q` (başlık/açıklama), `dueFrom`, `dueTo`, `overdue=true`, `sort` (`dueDate|priority|createdAt|title`), `page`, `size`.
+Hatalı parametreler tek yanıtta toplanır: 400 `VALIDATION_ERROR` + her parametre için `fieldErrors` (izin verilen değerler mesajda). Yetki kontrolü (403 `PROJECT_ACCESS_DENIED`) filtrelerden bağımsızdır; filtre denemeleriyle başka projenin görevleri görülemez.
 
 Görev yanıtı:
 ```json

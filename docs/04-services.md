@@ -41,7 +41,7 @@ Spring Cloud Gateway: route'lar, JWT doğrulama filtresi (global), doğrulanan k
 
 ## task-service (`task_db`)
 - Görev CRUD, atama, durum değişimi, `move` (durum + sıra).
-- Arama/filtre/sıralama/sayfalama (Specification).
+- Arama/filtre/sıralama/sayfalama (Specification): `task/query/` — `TaskListParams` (istekteki ham metin) → `TaskFilter.parse` (doğrulama, tüm hatalar `fieldErrors` olarak birlikte) → `TaskSpecifications` (koşullar + sıralama; `NULLS LAST` için sıralama Specification içinde kurulur, `Pageable` sırasız). Parametreler bkz. 06.
 - Her yazma işleminde Feign ile üyelik doğrulaması (`project-service`).
 - Proje silinince/arşivlenince görevlerin akıbeti: arşivlemede görevler korunur; kalıcı silmede project-service'in outbox relay'i `DELETE /internal/tasks/by-project/{id}` dahili ucunu çağırır. Uç **idempotent**tir (silinecek görev yoksa da 204).
 

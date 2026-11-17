@@ -1,8 +1,7 @@
 package com.kafein.todo.task.task;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,13 +9,11 @@ import org.springframework.data.repository.query.Param;
 import java.time.Instant;
 import java.util.List;
 
-public interface TaskRepository extends JpaRepository<Task, Long> {
+/** Filtreli liste {@link JpaSpecificationExecutor} ile ({@code task.query.TaskSpecifications}). */
+public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificationExecutor<Task> {
 
     /** Board: kolon (durum kodu) ve kolon içi sıraya göre; {@code (project_id, status, position)} indeksini kullanır. */
     List<Task> findByProjectIdOrderByStatusAscPositionAsc(long projectId);
-
-    /** Projenin görevleri, sayfalı (Faz 5'te filtreli listeye dönüşecek). */
-    Page<Task> findByProjectId(long projectId, Pageable pageable);
 
     /** Kolondaki en büyük pozisyon; kolon boşsa -1. Yeni görev {@code max + 1}'e, yani kolonun sonuna eklenir. */
     @Query("select coalesce(max(t.position), -1) from Task t where t.projectId = :projectId and t.status = :status")

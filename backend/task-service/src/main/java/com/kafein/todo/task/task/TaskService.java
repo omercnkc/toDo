@@ -5,16 +5,21 @@ import com.kafein.todo.common.error.ApiException;
 import com.kafein.todo.common.security.AuthenticatedUser;
 import com.kafein.todo.task.access.ProjectAccess;
 import com.kafein.todo.task.access.TaskAccessService;
+import com.kafein.todo.task.config.TaskProperties;
 import com.kafein.todo.task.task.dto.CreateTaskRequest;
 import com.kafein.todo.task.task.dto.TaskResponse;
 import com.kafein.todo.task.task.dto.UpdateTaskRequest;
+import com.kafein.todo.task.task.query.TaskFilter;
+import com.kafein.todo.task.task.query.TaskSpecifications;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -34,19 +39,21 @@ import java.util.Objects;
 @Service
 public class TaskService {
 
-    private static final Sort LIST_SORT = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
-
     private final TaskRepository tasks;
     private final TaskAccessService access;
     private final BoardLock boardLock;
     private final TransactionTemplate tx;
+    private final Clock clock;
+    private final ZoneId zone;
 
     public TaskService(TaskRepository tasks, TaskAccessService access, BoardLock boardLock,
-                       PlatformTransactionManager transactionManager) {
+                       PlatformTransactionManager transactionManager, Clock clock, TaskProperties properties) {
         this.tasks = tasks;
         this.access = access;
         this.boardLock = boardLock;
         this.tx = new TransactionTemplate(transactionManager);
+        this.clock = clock;
+        this.zone = properties.timeZone();
     }
 
     public TaskResponse create(AuthenticatedUser user, CreateTaskRequest request) {
@@ -68,10 +75,16 @@ public class TaskService {
         return TaskResponse.from(task, access.require(user, task.getProjectId()));
     }
 
-    /** Projenin görevleri, en yeniler önce. */
-    public PageResponse<TaskResponse> list(AuthenticatedUser user, long projectId, int page, int size) {
+    /**
+     * Projenin görevleri; filtre ve sıralama {@link TaskSpecifications}'ta. Yetki önce kontrol edilir: erişimi
+     * olmayan, filtre denemeleriyle görev olup olmadığını öğrenemesin.
+     */
+    public PageResponse<TaskResponse> list(AuthenticatedUser user, long projectId, TaskFilter filter, int page,
+                                           int size) {
         ProjectAccess projectAccess = access.require(user, projectId);
-        Page<Task> result = tasks.findByProjectId(projectId, PageRequest.of(page, size, LIST_SORT));
+        LocalDate today = LocalDate.now(clock.withZone(zone));
+        Page<Task> result = tasks.findAll(TaskSpecifications.matching(projectId, filter, today),
+                PageRequest.of(page, size));
         return PageResponse.of(result.map(task -> TaskResponse.from(task, projectAccess)).getContent(),
                 page, size, result.getTotalElements());
     }

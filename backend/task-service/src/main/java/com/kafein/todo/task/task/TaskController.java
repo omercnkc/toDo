@@ -7,6 +7,8 @@ import com.kafein.todo.task.task.dto.CreateTaskRequest;
 import com.kafein.todo.task.task.dto.MoveTaskRequest;
 import com.kafein.todo.task.task.dto.TaskResponse;
 import com.kafein.todo.task.task.dto.UpdateTaskRequest;
+import com.kafein.todo.task.task.query.TaskFilter;
+import com.kafein.todo.task.task.query.TaskListParams;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -14,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,15 +49,19 @@ public class TaskController {
         return taskService.create(user, request);
     }
 
-    /** Projenin görevleri, en yeniler önce. Arama/filtre/sıralama Faz 5'te. */
+    /**
+     * Projenin görevleri: filtreler, sıralama ve sayfalama (docs/06 "Liste filtreleri"). Varsayılan sıra en
+     * yeniler önce. Filtre parametreleri {@link TaskListParams}'ta; hatalıysa 400 + {@code fieldErrors}.
+     */
     @GetMapping
     public PageResponse<TaskResponse> list(@AuthenticationPrincipal AuthenticatedUser user,
                                            @RequestParam long projectId,
+                                           @ModelAttribute TaskListParams params,
                                            @RequestParam(defaultValue = "0") @Min(value = 0, message = "0 veya daha büyük olmalı") int page,
                                            @RequestParam(defaultValue = "20")
                                            @Min(value = 1, message = "en az 1 olmalı")
                                            @Max(value = 100, message = "en fazla 100 olabilir") int size) {
-        return taskService.list(user, projectId, page, size);
+        return taskService.list(user, projectId, TaskFilter.parse(params), page, size);
     }
 
     /** Kanban: {@code {"TODO":[..],"IN_PROGRESS":[..],"DONE":[..]}}, her kolon pozisyona göre sıralı. */
