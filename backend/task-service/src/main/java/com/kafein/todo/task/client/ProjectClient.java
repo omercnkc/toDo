@@ -3,6 +3,9 @@ package com.kafein.todo.task.client;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 /**
  * project-service uçları (docs/04 "ProjectClient"). Adres Eureka'dan ({@code lb://project-service});
@@ -23,4 +26,8 @@ public interface ProjectClient {
      */
     @GetMapping("/projects/{projectId}")
     ProjectSummary project(@PathVariable("projectId") long projectId);
+
+    /** Kullanıcının tüm üyelikleri (rol + proje durumu); üyeliği yoksa boş liste. */
+    @GetMapping("/internal/projects/memberships")
+    List<ProjectMembership> memberships(@RequestParam("userId") long userId);
 }

@@ -229,7 +229,6 @@ class TaskControllerIntegrationTest extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.content[0].canDelete").value(false));
         perform(get("/tasks").param("projectId", String.valueOf(projectId)).param("size", "101"), member)
                 .andExpect(status().isBadRequest());
-        perform(get("/tasks"), member).andExpect(status().isBadRequest());
     }
 
     // ---------- düzenleme ----------

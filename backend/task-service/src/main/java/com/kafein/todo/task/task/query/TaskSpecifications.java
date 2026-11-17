@@ -11,6 +11,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -26,13 +27,19 @@ public final class TaskSpecifications {
     }
 
     /**
-     * @param projectId görevlerin projesi (yetki çağıran tarafından kontrol edilmiş olmalı)
-     * @param today     "gecikmiş" hesabındaki bugün (uygulamanın saat dilimine göre)
+     * @param projectIds görevlerin projeleri, boş olmamalı (yetki çağıran tarafından kontrol edilmiş olmalı).
+     *                   Tek projede {@code =}, birden fazlada {@code IN} üretilir.
+     * @param today      "gecikmiş" hesabındaki bugün (uygulamanın saat dilimine göre)
      */
-    public static Specification<Task> matching(long projectId, TaskFilter filter, LocalDate today) {
+    public static Specification<Task> matching(Collection<Long> projectIds, TaskFilter filter, LocalDate today) {
+        if (projectIds.isEmpty()) {
+            throw new IllegalArgumentException("projectIds boş olamaz");
+        }
         return (root, query, cb) -> {
             List<Predicate> where = new ArrayList<>();
-            where.add(cb.equal(root.get("projectId"), projectId));
+            where.add(projectIds.size() == 1
+                    ? cb.equal(root.get("projectId"), projectIds.iterator().next())
+                    : root.get("projectId").in(projectIds));
 
             if (!filter.statuses().isEmpty()) {
                 where.add(root.get("status").in(filter.statuses()));

@@ -35,7 +35,7 @@ Spring Cloud Gateway: route'lar, JWT doğrulama filtresi (global), doğrulanan k
 - Proje CRUD (silme: yumuşak → `ARCHIVED`; kalıcı silme yalnızca ADMIN/sahip).
 - Üyelik: üye çıkar/listele. Proje oluşturan otomatik `OWNER` üye olur.
 - Davet: üye doğrudan eklenmez; OWNER davet gönderir, davet edilen kişi kabul ederse `MEMBER` olur (bkz. 05, 06). Bildirim/e-posta kapsam dışı olduğu için davet uygulama içinde "Davetlerim" ekranında görünür. Gateway `/api/invitations/**` yolunu da project-service'e yönlendirir.
-- Dahili uçlar: `GET /internal/projects/{id}/members/{userId}` (üyelik kontrolü), `GET /internal/projects/accessible?userId=` (kullanıcının proje id'leri). `/internal` öneki: gateway route etmez (auth-service'in `/internal/users/**` kararıyla aynı, 2-D).
+- Dahili uçlar: `GET /internal/projects/{id}/members/{userId}` (üyelik kontrolü), `GET /internal/projects/accessible?userId=` (kullanıcının proje id'leri), `GET /internal/projects/memberships?userId=` (üyelikler: rol + proje durumu; task-service'in projeler arası listesi, 5-B). `/internal` öneki: gateway route etmez (auth-service'in `/internal/users/**` kararıyla aynı, 2-D).
 - Feign: `auth-service` (kullanıcı doğrulama); `task-service` yalnızca outbox relay'i üzerinden (asenkron, kullanıcı isteği içinde değil).
 - **Outbox relay**: `@Scheduled` iş `outbox_events` tablosundaki bekleyen kayıtları işler (bkz. "Proje Kalıcı Silme – Outbox").
 
@@ -63,6 +63,6 @@ Tutarlılık: silme commit'inden sonra task-service'in üyelik kontrolü (Feign 
 | Client (sahibi) | Hedef uçlar |
 |---|---|
 | `AuthClient` (project, dashboard) | `GET /internal/users/{id}`, `POST /internal/users/lookup` |
-| `ProjectClient` (task, dashboard) | `GET /internal/projects/{id}/members/{userId}`, `GET /internal/projects/accessible`, `GET /projects/{id}` |
+| `ProjectClient` (task, dashboard) | `GET /internal/projects/{id}/members/{userId}`, `GET /internal/projects/accessible`, `GET /internal/projects/memberships`, `GET /projects/{id}` |
 | `TaskClient` (project – yalnızca outbox relay) | `DELETE /internal/tasks/by-project/{id}` |
 | `TaskClient` (dashboard) | `GET /tasks/stats`, `GET /tasks/assigned/{userId}` |

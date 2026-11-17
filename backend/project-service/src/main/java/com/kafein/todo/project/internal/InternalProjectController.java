@@ -44,4 +44,14 @@ public class InternalProjectController {
     public List<Long> accessible(@RequestParam long userId) {
         return members.findProjectIdsByUserId(userId);
     }
+
+    /**
+     * Kullanıcının tüm üyelikleri (rol + proje durumu), proje id'sine göre sıralı. task-service'in
+     * "benim projelerimdeki görevler" listesi: tek çağrıyla hem kapsam hem her projedeki silme yetkisi (OWNER).
+     */
+    @GetMapping("/memberships")
+    @Transactional(readOnly = true)
+    public List<MembershipResponse> memberships(@RequestParam long userId) {
+        return members.findWithProjectByUserId(userId).stream().map(MembershipResponse::from).toList();
+    }
 }

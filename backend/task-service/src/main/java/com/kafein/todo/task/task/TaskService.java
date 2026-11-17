@@ -76,16 +76,24 @@ public class TaskService {
     }
 
     /**
-     * Projenin görevleri; filtre ve sıralama {@link TaskSpecifications}'ta. Yetki önce kontrol edilir: erişimi
+     * Görev listesi; filtre ve sıralama {@link TaskSpecifications}'ta. Yetki önce kontrol edilir: erişimi
      * olmayan, filtre denemeleriyle görev olup olmadığını öğrenemesin.
+     *
+     * @param projectId tek proje; {@code null} ise kullanıcının üye olduğu tüm projeler ("benim projelerim")
      */
-    public PageResponse<TaskResponse> list(AuthenticatedUser user, long projectId, TaskFilter filter, int page,
+    public PageResponse<TaskResponse> list(AuthenticatedUser user, Long projectId, TaskFilter filter, int page,
                                            int size) {
-        ProjectAccess projectAccess = access.require(user, projectId);
+        Map<Long, ProjectAccess> scope = projectId != null
+                ? Map.of(projectId, access.require(user, projectId))
+                : access.requireMemberships(user);
+        if (scope.isEmpty()) {
+            return PageResponse.of(List.of(), page, size, 0);
+        }
         LocalDate today = LocalDate.now(clock.withZone(zone));
-        Page<Task> result = tasks.findAll(TaskSpecifications.matching(projectId, filter, today),
+        Page<Task> result = tasks.findAll(TaskSpecifications.matching(scope.keySet(), filter, today),
                 PageRequest.of(page, size));
-        return PageResponse.of(result.map(task -> TaskResponse.from(task, projectAccess)).getContent(),
+        return PageResponse.of(
+                result.map(task -> TaskResponse.from(task, scope.get(task.getProjectId()))).getContent(),
                 page, size, result.getTotalElements());
     }
 

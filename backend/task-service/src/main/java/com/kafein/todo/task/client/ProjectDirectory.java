@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -45,6 +46,15 @@ public class ProjectDirectory {
             return Optional.of(projectClient.project(projectId));
         } catch (FeignException.NotFound | FeignException.Forbidden e) {
             return Optional.empty();
+        } catch (FeignException e) {
+            throw unavailable(e);
+        }
+    }
+
+    /** Kullanıcının üye olduğu tüm projeler (arşivdekiler dahil). */
+    public List<ProjectMembership> memberships(long userId) {
+        try {
+            return projectClient.memberships(userId);
         } catch (FeignException e) {
             throw unavailable(e);
         }

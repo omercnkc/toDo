@@ -50,12 +50,13 @@ public class TaskController {
     }
 
     /**
-     * Projenin görevleri: filtreler, sıralama ve sayfalama (docs/06 "Liste filtreleri"). Varsayılan sıra en
+     * Görev listesi: filtreler, sıralama ve sayfalama (docs/06 "Liste filtreleri"). Varsayılan sıra en
      * yeniler önce. Filtre parametreleri {@link TaskListParams}'ta; hatalıysa 400 + {@code fieldErrors}.
+     * {@code projectId} yoksa kullanıcının üye olduğu tüm projelerin görevleri.
      */
     @GetMapping
     public PageResponse<TaskResponse> list(@AuthenticationPrincipal AuthenticatedUser user,
-                                           @RequestParam long projectId,
+                                           @RequestParam(required = false) Long projectId,
                                            @ModelAttribute TaskListParams params,
                                            @RequestParam(defaultValue = "0") @Min(value = 0, message = "0 veya daha büyük olmalı") int page,
                                            @RequestParam(defaultValue = "20")

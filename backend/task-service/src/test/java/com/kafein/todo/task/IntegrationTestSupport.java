@@ -94,6 +94,15 @@ public abstract class IntegrationTestSupport {
             }
             return new ProjectMembership(projectId, userId, role, projectStatuses.get(projectId));
         });
+        when(projectClient.memberships(anyLong())).thenAnswer(inv -> {
+            long userId = inv.getArgument(0);
+            return memberships.entrySet().stream()
+                    .filter(e -> e.getValue().containsKey(userId))
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(e -> new ProjectMembership(e.getKey(), userId, e.getValue().get(userId),
+                            projectStatuses.get(e.getKey())))
+                    .toList();
+        });
         when(projectClient.project(anyLong())).thenAnswer(inv -> {
             long projectId = inv.getArgument(0);
             ProjectStatus status = projectStatuses.get(projectId);
@@ -116,6 +125,19 @@ public abstract class IntegrationTestSupport {
         roles.put(owner.id(), ProjectRole.OWNER);
         roles.put(member.id(), ProjectRole.MEMBER);
         roles.put(member2.id(), ProjectRole.MEMBER);
+        memberships.put(projectId, roles);
+        projectStatuses.put(projectId, ProjectStatus.ACTIVE);
+        return projectId;
+    }
+
+    /** Sahibi ve üyeleri verilen aktif proje. */
+    protected long newProject(AuthenticatedUser projectOwner, AuthenticatedUser... projectMembers) {
+        long projectId = IDS.incrementAndGet();
+        Map<Long, ProjectRole> roles = new HashMap<>();
+        for (AuthenticatedUser m : projectMembers) {
+            roles.put(m.id(), ProjectRole.MEMBER);
+        }
+        roles.put(projectOwner.id(), ProjectRole.OWNER);
         memberships.put(projectId, roles);
         projectStatuses.put(projectId, ProjectStatus.ACTIVE);
         return projectId;

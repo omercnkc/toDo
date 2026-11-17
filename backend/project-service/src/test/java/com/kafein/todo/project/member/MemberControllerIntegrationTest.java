@@ -184,4 +184,29 @@ class MemberControllerIntegrationTest extends IntegrationTestSupport {
         perform(get("/internal/projects/accessible").param("userId", String.valueOf(stranger.id())), stranger)
                 .andExpect(jsonPath("$.length()").value(0));
     }
+
+    @Test
+    void dahiliUyeliklerRolVeProjeDurumuyla() throws Exception {
+        long first = createProject("Üyelik 1", true);
+        long second = createProject("Üyelik 2", true);
+        createProject("Üye olunmayan", false);
+        perform(delete("/projects/" + second), owner).andExpect(status().isNoContent());
+
+        perform(get("/internal/projects/memberships").param("userId", String.valueOf(member.id())), member)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].projectId").value(first))
+                .andExpect(jsonPath("$[0].userId").value(member.id()))
+                .andExpect(jsonPath("$[0].role").value("MEMBER"))
+                .andExpect(jsonPath("$[0].projectStatus").value("ACTIVE"))
+                .andExpect(jsonPath("$[1].projectId").value(second))
+                .andExpect(jsonPath("$[1].projectStatus").value("ARCHIVED"));
+        perform(get("/internal/projects/memberships").param("userId", String.valueOf(owner.id())), owner)
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].role").value("OWNER"));
+        perform(get("/internal/projects/memberships").param("userId", String.valueOf(stranger.id())), stranger)
+                .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/internal/projects/memberships").param("userId", String.valueOf(member.id())))
+                .andExpect(status().isUnauthorized());
+    }
 }

@@ -92,7 +92,7 @@ Proje uçları uygulama notları (3-B):
 - `GET /projects/{id}/members` → `[{userId, email, fullName, enabled, role, joinedAt}]`, önce OWNER sonra katılma sırası, sayfasız. Ad/e-posta/aktiflik auth-service'ten tek toplu `lookup` çağrısıyla (200'lük parçalar). auth-service'e ulaşılamazsa liste yine 200 döner, bu üç alan `null` olur (arayüz "Kullanıcı #id" gösterir).
 - `DELETE /projects/{id}/members/{userId}` → 204. Hatalar: üye değil 404 `MEMBER_NOT_FOUND`, OWNER 409 `OWNER_CANNOT_BE_REMOVED`, arşivlenmiş proje 409 `PROJECT_ARCHIVED`. Çıkarılan kişiye bu projede atanmış görevlerin `assigneeId`'si outbox ile asenkron boşaltılır (genelde birkaç saniye).
 - `DELETE /projects/{id}?permanent=true` → 204 (OWNER/ADMIN; arşivde olması şart değil; geri alınamaz). Proje, üyeler ve davetler hemen silinir; görevler outbox ile asenkron temizlenir. Olmayan proje 404 `PROJECT_NOT_FOUND`.
-- Dahili uçlar (gateway'den erişilemez; geçerli bir kullanıcı token'ı yeterli): `GET /internal/projects/{id}/members/{userId}` → `{projectId, userId, role, projectStatus}` veya 404 `MEMBERSHIP_NOT_FOUND`; `GET /internal/projects/accessible?userId=` → proje id listesi.
+- Dahili uçlar (gateway'den erişilemez; geçerli bir kullanıcı token'ı yeterli): `GET /internal/projects/{id}/members/{userId}` → `{projectId, userId, role, projectStatus}` veya 404 `MEMBERSHIP_NOT_FOUND`; `GET /internal/projects/accessible?userId=` → proje id listesi; `GET /internal/projects/memberships?userId=` → `[{projectId, userId, role, projectStatus}]` (proje id'sine göre, arşivdekiler dahil).
 - auth-service çağrıları hata verirse (davet gönderme gibi adın zorunlu olduğu yerlerde) 503 `USER_SERVICE_UNAVAILABLE`. Feign zaman aşımları: bağlantı 2 sn, okuma 5 sn.
 
 Davet yanıtı (3-D'de `respondedAt`, `invitee` ve kişilerde `email` eklendi):
@@ -142,7 +142,7 @@ Kurallar (Faz 4-B):
 **Liste filtreleri** (`GET /api/tasks`, Faz 5-A): filtreler VE ile, çok değerli bir filtrenin değerleri VEYA ile bağlanır.
 | Parametre | Açıklama |
 |---|---|
-| `projectId` | Zorunlu (Faz 5-B'de boşsa "erişebildiğim tüm projeler") |
+| `projectId` | İsteğe bağlı (5-B). Verilirse o proje (üye veya ADMIN). Verilmezse kullanıcının **üye olduğu** tüm projeler, arşivdekiler dahil; `canDelete` her görev için kendi projesindeki role göre. ADMIN için de yalnızca üye olduğu projeler (sistemdeki tüm görevler tek listede açılmaz; üye olmadığı projeye `projectId` ile erişir). Üyeliği yoksa boş sayfa; project-service'e ulaşılamazsa 503 |
 | `status`, `priority` | Çok değerli: `status=TODO,DONE` veya `status=TODO&status=DONE`; büyük/küçük harf duyarsız |
 | `assigneeId` | Kullanıcı id'si veya `none` (atanmamışlar) |
 | `q` | Başlık **veya** açıklamada "içerir"; `%` `_` joker sayılmaz; Türkçe kurallarla büyük/küçük harf ve aksan duyarsız (`IŞIK` = `ışık`, `istanbul` = `İstanbul`, `resume` = `Résumé`; Türkçede `I`'nın küçüğü `ı` olduğu için `ISTANBUL` ≠ `İstanbul`, frontend'deki `tr-TR` filtreyle aynı). En fazla 200 karakter |

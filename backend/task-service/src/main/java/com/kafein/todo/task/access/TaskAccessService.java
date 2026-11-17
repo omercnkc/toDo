@@ -8,6 +8,8 @@ import com.kafein.todo.task.client.ProjectSummary;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -42,6 +44,20 @@ public class TaskAccessService {
             return new ProjectAccess(projectId, user.id(), null, true, project.isArchived());
         }
         throw ApiException.forbidden("PROJECT_ACCESS_DENIED", "Bu projeye erişim yetkiniz yok");
+    }
+
+    /**
+     * "Benim projelerim" kapsamı: kullanıcının üye olduğu her proje için okuma yetkisi (proje id'sine göre).
+     * ADMIN için de yalnızca üyesi olduğu projeler: sistemdeki tüm görevleri tek listede açmak bu ucun işi değil
+     * (üye olmayan ADMIN tek tek {@code projectId} ile erişir).
+     */
+    public Map<Long, ProjectAccess> requireMemberships(AuthenticatedUser user) {
+        Map<Long, ProjectAccess> result = new LinkedHashMap<>();
+        for (ProjectMembership m : projects.memberships(user.id())) {
+            result.put(m.projectId(),
+                    new ProjectAccess(m.projectId(), user.id(), m.role(), user.isAdmin(), m.isProjectArchived()));
+        }
+        return result;
     }
 
     /** Yazma yetkisi: okuma + proje arşivde değil. */

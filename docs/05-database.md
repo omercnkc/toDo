@@ -117,8 +117,23 @@ Kabul edildiğinde tek transaction'da: davet `ACCEPTED` olur + `project_members`
 | version | BIGINT | NOT NULL, default 0 (optimistic lock, `@Version`) |
 | created_at / updated_at | DATETIME(6) | NOT NULL |
 
-İndeksler: `(project_id, status, position)`, `(assignee_id, status)`, `(due_date)`, `(project_id, priority)`.
-Arama (`q`) ilk sürümde `LIKE %q%`; veri büyürse FULLTEXT indeks (`title`, `description`) eklenir (ölçüm Faz 5-B'de).
+İndeksler: `(project_id, status, position)`, `(assignee_id, status)`, `(due_date)`, `(project_id, priority)`, `(project_id, created_at)` (`V4`, Faz 5-B: listenin varsayılan "en yeniler önce" sırası; ikincil indeks `id`'yi de içerdiği için `ORDER BY created_at DESC, id DESC` tersten okunur, sıralama gerekmez).
+
+**Liste sorgusu ölçümleri (Faz 5-B).** Docker'daki MySQL 8'de 100 bin görevli bir proje + 20 bin görevli ikinci proje + 200 başka projede 100 bin görev (toplam 220 bin). Süreler gateway üzerinden (JWT + project-service yetki çağrısı dahil, ~40 ms sabit), 7 ölçümün medyanı, 20'lik sayfa:
+
+| Sorgu | `V4` öncesi | `V4` sonrası | DB'de (EXPLAIN ANALYZE) |
+|---|---|---|---|
+| Varsayılan (en yeniler) | 196 ms | 57 ms | 156 ms filesort → 0,1 ms ters indeks okuma |
+| `status=TODO` | 97 ms | 45 ms | 45 → 0,2 ms |
+| `overdue=true` | 370 ms | 127 ms | ilk sayfa 116 → 0,5 ms; kalan süre sayım (23 bin satır, ~90 ms) |
+| `assigneeId` / tarih aralığı | 88–125 ms | 55–67 ms | |
+| `q` (sonuçlu/sonuçsuz) | ~300 ms | ~165 ms | `LIKE %q%` tam tarama ~115 ms |
+| `sort=title` / `priority,desc,dueDate` (filtresiz) | ~200 ms | 197–238 ms | 100 bin satırda filesort |
+| Projeler arası (120 bin görev) | 202 ms | 238 ms | `IN` + sıralama: filesort |
+| Son sayfa (`page=4999`) | 284 ms | 198 ms | `OFFSET` 99 980 |
+
+Kararlar: (1) Başka indeks eklenmedi: filtresiz başlık/öncelik sıralaması ve projeler arası sıralama tek projede 100 bin görevde bile ~240 ms; her sıralama için ayrı indeksin yazma maliyetini haklı çıkarmıyor. (2) **FULLTEXT eklenmedi:** arama "içerir" anlamında (kelime ortası da eşleşir) ve Türkçe kurallara bağlı; FULLTEXT kelime bazlıdır, en kısa kelime sınırı vardır ve Türkçe eklerle (toplantı**sı**) eşleşmez. 100 bin görevde `LIKE` ~165 ms. (3) Sayım her sayfada çalışır (100 bin satırda ~19 ms, kapsayan indeksle).
+Arama (`q`) `LIKE %q%`; FULLTEXT ölçüm sonrası eklenmedi (aşağıda "Liste sorgusu ölçümleri").
 `title` ve `description` kolonları `utf8mb4_tr_0900_ai_ci` (`V3`, Faz 5-A): arama ve başlığa göre sıralama Türkçe kurallarla (I ↔ ı, İ ↔ i; Türk alfabesi sırası), büyük/küçük harf ve diğer aksanlar duyarsız. Tablonun geri kalanı `utf8mb4_0900_ai_ci`.
 
 **task_board_locks** (proje bazlı board kilidi)
