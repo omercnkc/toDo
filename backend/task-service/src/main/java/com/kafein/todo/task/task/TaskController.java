@@ -2,6 +2,8 @@ package com.kafein.todo.task.task;
 
 import com.kafein.todo.common.dto.PageResponse;
 import com.kafein.todo.common.security.AuthenticatedUser;
+import com.kafein.todo.task.stats.TaskStatsResponse;
+import com.kafein.todo.task.stats.TaskStatsService;
 import com.kafein.todo.task.task.dto.ChangeStatusRequest;
 import com.kafein.todo.task.task.dto.CreateTaskRequest;
 import com.kafein.todo.task.task.dto.MoveTaskRequest;
@@ -36,9 +38,11 @@ import java.util.Map;
 public class TaskController {
 
     private final TaskService taskService;
+    private final TaskStatsService statsService;
 
-    public TaskController(TaskService taskService) {
+    public TaskController(TaskService taskService, TaskStatsService statsService) {
         this.taskService = taskService;
+        this.statsService = statsService;
     }
 
     /** Yeni görev {@code TODO} kolonunun sonuna eklenir; oluşturan kişi reporter olur. */
@@ -63,6 +67,16 @@ public class TaskController {
                                            @Min(value = 1, message = "en az 1 olmalı")
                                            @Max(value = 100, message = "en fazla 100 olabilir") int size) {
         return taskService.list(user, projectId, TaskFilter.parse(params), page, size);
+    }
+
+    /**
+     * Dashboard sayıları (proje başına durum/gecikmiş, bana atanan açık görevler). {@code scope=mine} (varsayılan)
+     * üye olunan projeler, {@code scope=all} tüm sistem (yalnızca ADMIN).
+     */
+    @GetMapping("/stats")
+    public TaskStatsResponse stats(@AuthenticationPrincipal AuthenticatedUser user,
+                                   @RequestParam(required = false) String scope) {
+        return statsService.stats(user, scope);
     }
 
     /** Kanban: {@code {"TODO":[..],"IN_PROGRESS":[..],"DONE":[..]}}, her kolon pozisyona göre sıralı. */

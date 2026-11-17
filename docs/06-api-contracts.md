@@ -92,7 +92,7 @@ Proje uçları uygulama notları (3-B):
 - `GET /projects/{id}/members` → `[{userId, email, fullName, enabled, role, joinedAt}]`, önce OWNER sonra katılma sırası, sayfasız. Ad/e-posta/aktiflik auth-service'ten tek toplu `lookup` çağrısıyla (200'lük parçalar). auth-service'e ulaşılamazsa liste yine 200 döner, bu üç alan `null` olur (arayüz "Kullanıcı #id" gösterir).
 - `DELETE /projects/{id}/members/{userId}` → 204. Hatalar: üye değil 404 `MEMBER_NOT_FOUND`, OWNER 409 `OWNER_CANNOT_BE_REMOVED`, arşivlenmiş proje 409 `PROJECT_ARCHIVED`. Çıkarılan kişiye bu projede atanmış görevlerin `assigneeId`'si outbox ile asenkron boşaltılır (genelde birkaç saniye).
 - `DELETE /projects/{id}?permanent=true` → 204 (OWNER/ADMIN; arşivde olması şart değil; geri alınamaz). Proje, üyeler ve davetler hemen silinir; görevler outbox ile asenkron temizlenir. Olmayan proje 404 `PROJECT_NOT_FOUND`.
-- Dahili uçlar (gateway'den erişilemez; geçerli bir kullanıcı token'ı yeterli): `GET /internal/projects/{id}/members/{userId}` → `{projectId, userId, role, projectStatus}` veya 404 `MEMBERSHIP_NOT_FOUND`; `GET /internal/projects/accessible?userId=` → proje id listesi; `GET /internal/projects/memberships?userId=` → `[{projectId, userId, role, projectStatus}]` (proje id'sine göre, arşivdekiler dahil).
+- Dahili uçlar (gateway'den erişilemez; geçerli bir kullanıcı token'ı yeterli): `GET /internal/projects/{id}/members/{userId}` → `{projectId, projectName, userId, role, projectStatus}` veya 404 `MEMBERSHIP_NOT_FOUND`; `GET /internal/projects/accessible?userId=` → proje id listesi; `GET /internal/projects/memberships?userId=` → `[{projectId, projectName, userId, role, projectStatus}]` (proje id'sine göre, arşivdekiler dahil).
 - auth-service çağrıları hata verirse (davet gönderme gibi adın zorunlu olduğu yerlerde) 503 `USER_SERVICE_UNAVAILABLE`. Feign zaman aşımları: bağlantı 2 sn, okuma 5 sn.
 
 Davet yanıtı (3-D'de `respondedAt`, `invitee` ve kişilerde `email` eklendi):
@@ -128,6 +128,7 @@ Davet uçları uygulama notları (3-D):
 | PATCH | `/api/tasks/{id}/move` | Proje üyesi | `{status, position}` – Kanban sürükle-bırak |
 | DELETE | `/api/tasks/{id}` | Reporter / OWNER / ADMIN | Sil |
 | GET | `/api/tasks/board?projectId=` | Proje üyesi | `{TODO:[..],IN_PROGRESS:[..],DONE:[..]}` pozisyona göre sıralı |
+| GET | `/api/tasks/stats?scope=mine\|all` | Giriş yapmış (`all` yalnızca ADMIN) | Dashboard sayıları (6-A), aşağıda |
 
 Kurallar (Faz 4-B):
 - Yetki her istekte project-service'e sorulur. Üye değil → 403 `PROJECT_ACCESS_DENIED` (proje var mı yok mu söylenmez); üye olmayan ADMIN erişir, proje yoksa 404 `PROJECT_NOT_FOUND`; project-service'e ulaşılamazsa 503 `PROJECT_SERVICE_UNAVAILABLE`.
@@ -152,6 +153,17 @@ Kurallar (Faz 4-B):
 | `page`, `size` | `page` ≥ 0, `size` 1–100 (varsayılan 20) |
 
 Hatalı parametreler tek yanıtta toplanır: 400 `VALIDATION_ERROR` + her parametre için `fieldErrors` (izin verilen değerler mesajda). Yetki kontrolü (403 `PROJECT_ACCESS_DENIED`) filtrelerden bağımsızdır; filtre denemeleriyle başka projenin görevleri görülemez.
+
+**İstatistik** (`GET /api/tasks/stats`, Faz 6-A): görevler değil yalnızca sayılar; iki gruplu sorgu.
+```json
+{ "scope": "mine",
+  "projects": [ { "projectId": 7, "todo": 12, "inProgress": 5, "done": 20, "overdue": 3, "total": 37 } ],
+  "assignedToMe": { "open": 6, "overdue": 1 } }
+```
+- `scope=mine` (varsayılan): üye olunan projeler (arşivdekiler dahil), görevi olmayanlar sıfırlarla; proje id'sine göre sıralı. ADMIN için de varsayılan budur.
+- `scope=all`: tüm sistem, yalnızca ADMIN (USER → 403 `STATS_SCOPE_FORBIDDEN`); yalnızca görevi olan projeler listelenir (task-service tüm projeleri bilmez; adları/durumları dashboard-service project-service'ten alır). project-service'e sorulmaz.
+- `overdue`: bitiş tarihi bugünden önce (`task.time-zone`) ve `DONE` değil — liste ucunun `overdue=true` filtresiyle aynı tanım. `assignedToMe.open`: istekte bulunana atanmış, `DONE` olmayan (kapsam içinde).
+- Geçersiz `scope` → 400 `fieldErrors[scope]`; project-service'e ulaşılamazsa (`mine`) 503.
 
 Görev yanıtı:
 ```json

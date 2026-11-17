@@ -158,6 +158,7 @@ class MemberControllerIntegrationTest extends IntegrationTestSupport {
         perform(get("/internal/projects/" + id + "/members/" + member.id()), member)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.projectId").value(id))
+                .andExpect(jsonPath("$.projectName").value("Dahili"))
                 .andExpect(jsonPath("$.userId").value(member.id()))
                 .andExpect(jsonPath("$.role").value("MEMBER"))
                 .andExpect(jsonPath("$.projectStatus").value("ACTIVE"));
@@ -196,6 +197,7 @@ class MemberControllerIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].projectId").value(first))
+                .andExpect(jsonPath("$[0].projectName").value("Üyelik 1"))
                 .andExpect(jsonPath("$[0].userId").value(member.id()))
                 .andExpect(jsonPath("$[0].role").value("MEMBER"))
                 .andExpect(jsonPath("$[0].projectStatus").value("ACTIVE"))

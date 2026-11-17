@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 /** Filtreli liste {@link JpaSpecificationExecutor} ile ({@code task.query.TaskSpecifications}). */
@@ -39,6 +41,64 @@ public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificat
             + " where t.projectId = :projectId and t.status = :status and t.position between :from and :to")
     int shift(@Param("projectId") long projectId, @Param("status") TaskStatus status,
               @Param("from") int from, @Param("to") int to, @Param("delta") int delta);
+
+    /**
+     * Dashboard: proje ve durum başına görev sayısı + gecikmiş sayısı (bitiş tarihi {@code today}'den önce ve
+     * {@code DONE} değil). Tek sorgu, görevler belleğe alınmaz. {@code projectIds} boş olmamalı.
+     */
+    @Query("""
+            select t.projectId as projectId, t.status as status, count(t) as total,
+                   sum(case when t.dueDate < :today and t.status <> :done then 1 else 0 end) as overdue
+              from Task t
+             where t.projectId in :projectIds
+             group by t.projectId, t.status""")
+    List<StatusCount> countByProjectAndStatus(@Param("projectIds") Collection<Long> projectIds,
+                                              @Param("today") LocalDate today, @Param("done") TaskStatus done);
+
+    /** {@link #countByProjectAndStatus} tüm sistem için (ADMIN, {@code scope=all}). */
+    @Query("""
+            select t.projectId as projectId, t.status as status, count(t) as total,
+                   sum(case when t.dueDate < :today and t.status <> :done then 1 else 0 end) as overdue
+              from Task t
+             group by t.projectId, t.status""")
+    List<StatusCount> countAllByProjectAndStatus(@Param("today") LocalDate today, @Param("done") TaskStatus done);
+
+    /**
+     * Verilen projelerde kullanıcıya atanmış açık (DONE olmayan) görev sayısı ve bunlardan gecikmiş olanlar.
+     * {@code (assignee_id, status)} indeksi. {@code projectIds} boş olmamalı.
+     */
+    @Query("""
+            select count(t) as open,
+                   coalesce(sum(case when t.dueDate < :today then 1 else 0 end), 0) as overdue
+              from Task t
+             where t.assigneeId = :userId and t.status <> :done and t.projectId in :projectIds""")
+    AssignedCount countOpenAssigned(@Param("userId") long userId, @Param("projectIds") Collection<Long> projectIds,
+                                    @Param("today") LocalDate today, @Param("done") TaskStatus done);
+
+    /** {@link #countOpenAssigned} tüm sistemde (ADMIN, {@code scope=all}). */
+    @Query("""
+            select count(t) as open,
+                   coalesce(sum(case when t.dueDate < :today then 1 else 0 end), 0) as overdue
+              from Task t
+             where t.assigneeId = :userId and t.status <> :done""")
+    AssignedCount countAllOpenAssigned(@Param("userId") long userId, @Param("today") LocalDate today,
+                                       @Param("done") TaskStatus done);
+
+    interface StatusCount {
+        long getProjectId();
+
+        TaskStatus getStatus();
+
+        long getTotal();
+
+        long getOverdue();
+    }
+
+    interface AssignedCount {
+        long getOpen();
+
+        long getOverdue();
+    }
 
     /** Projenin tüm görevleri (kalıcı silinen proje; outbox relay). */
     @Modifying(flushAutomatically = true, clearAutomatically = true)

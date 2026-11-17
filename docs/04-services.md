@@ -47,7 +47,7 @@ Spring Cloud Gateway: route'lar, JWT doğrulama filtresi (global), doğrulanan k
 
 ## dashboard-service (DB yok)
 Kullanıcının erişebildiği projeleri ve görev istatistiklerini Feign ile toplar, tek yanıtta döner. Önbellek (Caffeine, 30–60 sn) opsiyoneldir.
-İstatistik hesabı için task-service'te toplu uç sağlanır: `GET /tasks/stats?projectIds=1,2,3` (durum bazlı sayılar, geciken sayısı) — böylece tüm görevler çekilmez.
+İstatistik hesabı için task-service'te toplu uç sağlanır: `GET /tasks/stats?scope=mine|all` (proje başına durum sayıları, geciken, bana atanan açık görevler; 6-A) — tüm görevler çekilmez, `GROUP BY project_id, status` ile sayılır (100 bin görevli projede gateway üzerinden ~150 ms). Kapsam proje id listesiyle değil, task-service'in kendi yetki kuralıyla (üyelikler / ADMIN için tüm sistem) belirlenir: istemci başkasının projesini istemeye çalışamaz.
 
 ## Proje Kalıcı Silme – Outbox
 1. `DELETE /api/projects/{id}?permanent=true` → **tek transaction**: proje satırı silinir (üyeler/davetler `ON DELETE CASCADE`) + `outbox_events`'e `PROJECT_DELETED` kaydı (`PENDING`) yazılır. İstemciye 204 döner; görev temizliği asenkrondur (genelde birkaç saniye).
@@ -65,4 +65,4 @@ Tutarlılık: silme commit'inden sonra task-service'in üyelik kontrolü (Feign 
 | `AuthClient` (project, dashboard) | `GET /internal/users/{id}`, `POST /internal/users/lookup` |
 | `ProjectClient` (task, dashboard) | `GET /internal/projects/{id}/members/{userId}`, `GET /internal/projects/accessible`, `GET /internal/projects/memberships`, `GET /projects/{id}` |
 | `TaskClient` (project – yalnızca outbox relay) | `DELETE /internal/tasks/by-project/{id}` |
-| `TaskClient` (dashboard) | `GET /tasks/stats`, `GET /tasks/assigned/{userId}` |
+| `TaskClient` (dashboard) | `GET /tasks/stats?scope=` (bana atanan/yaklaşan listeler frontend'de `GET /tasks` projeler arası ucuyla, 6-E) |
