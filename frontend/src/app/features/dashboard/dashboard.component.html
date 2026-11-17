@@ -1,19 +1,190 @@
 <ng-container *ngIf="user$ | async as user">
-  <h1 class="h3 mb-1">Hoş geldin, {{ user.fullName }}</h1>
-  <p class="text-muted mb-4">Projelerin ve görevlerinin özeti burada görünecek.</p>
+  <header class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+    <div class="min-w-0">
+      <h1 class="h3 mb-1 text-break">Hoş geldin, {{ user.fullName }}</h1>
+      <p class="small text-muted mb-0">
+        {{ scope === 'all' ? 'Tüm sistemin özeti' : 'Projelerinin ve görevlerinin özeti' }}
+        <span *ngIf="summary">· Güncellendi {{ summary.generatedAt | date: 'HH:mm' }}</span>
+        <span *ngIf="loading && summary" class="ms-1" role="status">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span class="visually-hidden">Yükleniyor</span>
+        </span>
+      </p>
+    </div>
+    <nav *ngIf="isAdmin" class="btn-group" role="group" aria-label="Kapsam">
+      <a
+        routerLink="/dashboard"
+        class="btn btn-sm btn-outline-secondary"
+        [class.active]="scope === 'mine'"
+        [attr.aria-current]="scope === 'mine' ? 'page' : null"
+        (click)="$event.preventDefault(); setScope('mine')"
+        >Benim projelerim</a
+      >
+      <a
+        routerLink="/dashboard"
+        [queryParams]="{ scope: 'all' }"
+        class="btn btn-sm btn-outline-secondary"
+        [class.active]="scope === 'all'"
+        [attr.aria-current]="scope === 'all' ? 'page' : null"
+        (click)="$event.preventDefault(); setScope('all')"
+        >Tüm sistem</a
+      >
+    </nav>
+  </header>
 
   <div *ngIf="pendingInvitations$ | async as count" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="status">
     <span class="flex-grow-1">{{ count }} bekleyen proje davetin var.</span>
     <a routerLink="/invitations" class="btn btn-sm btn-warning">Davetlerime git</a>
   </div>
 
-  <div class="card shadow-sm border-0">
-    <div class="card-body p-4">
-      <p class="mb-3">Özet sayılar ve grafikler ileride burada olacak. Şimdilik projelerinden devam edebilirsin.</p>
-      <div class="d-flex flex-wrap gap-2">
-        <a routerLink="/projects" class="btn btn-primary">Projelerim</a>
-        <a routerLink="/projects/new" class="btn btn-outline-primary">Yeni proje</a>
+  <div *ngIf="loading && !summary && !error" class="d-flex align-items-center gap-2 text-muted" role="status">
+    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+    Özet yükleniyor…
+  </div>
+
+  <!-- Hata -->
+  <div *ngIf="error" class="card shadow-sm border-0">
+    <div class="card-body p-5 text-center" [ngSwitch]="error">
+      <ng-container *ngSwitchCase="'unavailable'">
+        <h2 class="h5">Özet şu an alınamıyor</h2>
+        <p class="text-muted">Görev veya proje servisine ulaşılamadı. Biraz sonra tekrar dene.</p>
+      </ng-container>
+      <ng-container *ngSwitchCase="'forbidden'">
+        <h2 class="h5">Bu özeti görme yetkin yok</h2>
+        <p class="text-muted">Tüm sistemin özeti yalnızca yöneticilere açık.</p>
+      </ng-container>
+      <ng-container *ngSwitchDefault>
+        <h2 class="h5">Özet yüklenemedi</h2>
+        <p class="text-muted">Bağlantını kontrol edip tekrar dene.</p>
+      </ng-container>
+      <button type="button" class="btn btn-outline-secondary me-2" (click)="retry()">Tekrar dene</button>
+      <a routerLink="/projects" class="btn btn-primary">Projelerime git</a>
+    </div>
+  </div>
+
+  <!-- İlk kullanım: hiç proje yok -->
+  <div *ngIf="summary && !error && summary.projectCount === 0" class="card shadow-sm border-0">
+    <div class="card-body p-5 text-center">
+      <h2 class="h5">{{ scope === 'all' ? 'Sistemde henüz proje yok' : 'Henüz bir projen yok' }}</h2>
+      <p class="text-muted mb-3">Bir proje oluştur ya da sana gelen daveti kabul et; özet burada görünecek.</p>
+      <div class="d-flex flex-wrap justify-content-center gap-2">
+        <a routerLink="/projects/new" class="btn btn-primary">Yeni proje</a>
+        <a routerLink="/invitations" class="btn btn-outline-secondary">Davetlerim</a>
       </div>
     </div>
   </div>
+
+  <ng-container *ngIf="summary && !error && summary.projectCount > 0">
+    <!-- Özet kartları -->
+    <section class="row g-3 mb-3" aria-label="Özet sayılar" [class.is-loading]="loading">
+      <div class="col-6 col-lg-3">
+        <a routerLink="/projects" class="card stat-card shadow-sm border-0 h-100 text-decoration-none">
+          <div class="card-body">
+            <div class="stat-label">Projeler</div>
+            <div class="stat-value" data-stat="projects">{{ summary.activeProjectCount }}</div>
+            <div class="stat-hint">
+              {{ summary.archivedProjectCount ? '+' + summary.archivedProjectCount + ' arşivde' : 'aktif proje' }}
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="card stat-card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <div class="stat-label">Açık görev</div>
+            <div class="stat-value" data-stat="open">{{ summary.openTasks }}</div>
+            <div class="stat-hint">toplam {{ summary.totalTasks }} görevin</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="card stat-card shadow-sm border-0 h-100" [class.stat-alert]="summary.overdueCount > 0">
+          <div class="card-body">
+            <div class="stat-label">Geciken</div>
+            <div class="stat-value" data-stat="overdue">{{ summary.overdueCount }}</div>
+            <div class="stat-hint">{{ summary.overdueCount ? 'bitiş tarihi geçmiş' : 'geciken görev yok' }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="card stat-card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <div class="stat-label">Bana atanan</div>
+            <div class="stat-value" data-stat="mine">{{ summary.assignedToMe.open }}</div>
+            <div class="stat-hint" [class.text-danger]="summary.assignedToMe.overdue > 0">
+              {{ summary.assignedToMe.overdue ? summary.assignedToMe.overdue + ' tanesi gecikmiş' : 'açık görev' }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="row g-3" [class.is-loading]="loading">
+      <!-- Durum dağılımı -->
+      <section class="col-12 col-lg-5" aria-labelledby="status-title">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <h2 id="status-title" class="h6 mb-3">Görev durumu</h2>
+            <p *ngIf="summary.totalTasks === 0" class="text-muted mb-0">Henüz görev yok.</p>
+            <div *ngIf="summary.totalTasks > 0" class="d-flex flex-column flex-sm-row align-items-center gap-3">
+              <div class="chart-box">
+                <canvas baseChart type="doughnut" [data]="chartData" [options]="chartOptions" role="img" [attr.aria-label]="chartLabel"></canvas>
+                <div class="chart-center" aria-hidden="true">
+                  <span class="chart-total">{{ summary.totalTasks }}</span>
+                  <span class="small text-muted">görev</span>
+                </div>
+              </div>
+              <ul class="list-unstyled mb-0 flex-grow-1 w-100 status-legend">
+                <li *ngFor="let slice of slices" class="d-flex align-items-center gap-2 py-1" [attr.data-status]="slice.status">
+                  <span class="legend-dot" [style.background-color]="slice.color" aria-hidden="true"></span>
+                  <span class="flex-grow-1">{{ slice.label }}</span>
+                  <span class="fw-semibold">{{ slice.count }}</span>
+                  <span class="text-muted small legend-percent">%{{ slice.percent }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Proje ilerlemeleri -->
+      <section class="col-12 col-lg-7" aria-labelledby="progress-title">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-baseline justify-content-between gap-2 mb-3">
+              <h2 id="progress-title" class="h6 mb-0">Proje ilerlemesi</h2>
+              <a *ngIf="hiddenProjectCount > 0" routerLink="/projects" [queryParams]="{ status: 'ALL' }" class="small">
+                Tüm projeler (+{{ hiddenProjectCount }})
+              </a>
+            </div>
+            <ul class="list-unstyled mb-0 project-progress">
+              <li *ngFor="let project of visibleProjects; trackBy: trackProject" class="mb-3" [attr.data-project-id]="project.id" [class.archived]="project.status === 'ARCHIVED'">
+                <div class="d-flex align-items-baseline justify-content-between gap-2">
+                  <a [routerLink]="['/projects', project.id, 'tasks']" class="fw-semibold text-break text-decoration-none min-w-0">{{ project.name }}</a>
+                  <span class="small text-muted text-nowrap">
+                    {{ project.done }}/{{ project.total }} · <strong class="text-body">%{{ project.progressPercent }}</strong>
+                  </span>
+                </div>
+                <div
+                  class="progress mt-1"
+                  role="progressbar"
+                  [attr.aria-label]="project.name + ' ilerlemesi'"
+                  [attr.aria-valuenow]="project.progressPercent"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  <div class="progress-bar bg-success" [style.width.%]="project.progressPercent"></div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 small mt-1">
+                  <span *ngIf="project.status === 'ARCHIVED'" class="badge bg-secondary">Arşivde</span>
+                  <span *ngIf="roleLabel(project) as role" class="text-muted">{{ role }}</span>
+                  <span class="text-muted">{{ project.total ? project.total + ' görev' : 'Görev yok' }}</span>
+                  <span *ngIf="project.overdue > 0" class="text-danger">{{ project.overdue }} geciken</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </ng-container>
 </ng-container>

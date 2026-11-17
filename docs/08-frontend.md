@@ -127,6 +127,13 @@ Uygulama notları (5-D) – arama ve filtreler:
 ## Dashboard
 Üst kartlar (proje sayısı, toplam/açık/geciken görev), görev durum dağılımı (doughnut), proje ilerleme çubukları, yaklaşan bitiş tarihleri listesi, bana atanan görevler. `ng2-charts` + Chart.js.
 
+Uygulama notları (6-D):
+- `DashboardService.summary(scope)` (`SKIP_ERROR_TOAST`: hata sayfada). Kapsam URL'de: `?scope=all` yalnızca ADMIN'de "Tüm sistem"; USER'da yok sayılır (istek bile gitmez). ADMIN'e "Benim projelerim / Tüm sistem" bağlantı grubu (`aria-current`, geri tuşu çalışır).
+- Kartlar: Projeler (aktif, "+N arşivde"; `/projects`'e bağlantı), Açık görev (toplamın), Geciken (sıfırdan büyükse kırmızı), Bana atanan (gecikmiş sayısıyla). Başlıkta "Güncellendi HH:mm" (`generatedAt`; sunucu önbelleği 30 sn).
+- Durum dağılımı: `ng2-charts` 3.1.2 + `chart.js` 3.9.1 (Angular 13 uyumlu son sürümler, sabit sürüm), yalnızca lazy dashboard paketinde (225 kB, gzip 67 kB; başlangıç paketi değişmedi). Chart.js'in kendi açıklaması kapalı; yanında HTML açıklama listesi (renk, sayı, yüzde) — grafiğin erişilebilir karşılığı; tuval `role="img"` + tek cümlelik `aria-label`. Halkanın ortasında toplam. "Hareketi azalt" tercihinde animasyon yok. Görev yoksa grafik yerine metin.
+- Proje ilerlemesi: sunucu sırası (aktifler önce, Türkçe ada göre), en fazla 8 proje + "Tüm projeler (+N)" (`/projects?status=ALL`); ad görev listesine bağlantı; çubuk `role="progressbar"`; rol, "N görev"/"Görev yok", geciken, arşiv rozeti.
+- Durumlar: ilk kullanım (hiç proje yok → yeni proje / davetlerim), yükleniyor (yeniden yüklemede eski sayılar soluk), 503 → "Özet şu an alınamıyor" + tekrar dene, 403. Bekleyen davet uyarısı korunur. Mobilde kartlar 2×2, grafik ve liste alt alta.
+
 ## Responsive
 - Bootstrap grid (`col-12 col-md-6 col-lg-4`), navbar mobilde offcanvas/collapse.
 - Kanban: masaüstünde 3 kolon yan yana; mobilde yatay kaydırma (scroll-snap) ya da kolonlar alt alta. CDK drag-drop dokunmatikte çalışır.

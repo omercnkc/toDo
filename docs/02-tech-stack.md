@@ -28,7 +28,7 @@
 | RxJS | 7.x – reaktif akışlar, `switchMap`, `debounceTime`, `BehaviorSubject` |
 | Bootstrap | 5.x + SCSS (grid, utility sınıfları) |
 | @angular/cdk | 13.x – `drag-drop` (Kanban) |
-| ng2-charts + chart.js | Angular 13 uyumlu sürüm (ng2-charts 3.x / chart.js 3.x) |
+| ng2-charts + chart.js | Angular 13 uyumlu sürüm: ng2-charts 3.1.2 / chart.js 3.9.1 (sabit; yalnızca dashboard paketinde) |
 | Jest veya Karma/Jasmine | Birim test (varsayılan Karma) |
 
 > Not: Node 14 + Angular 13 kombinasyonu eskidir; bağımlılıklar `package-lock` ile sabitlenmeli ve Node 14 uyumsuz paket sürümleri kullanılmamalıdır.
