@@ -1,0 +1,18 @@
+# @ActiveProfiles("test") ile yüklenir. Değerler .env'den bağımsızdır (CI'da .env yok).
+dashboard:
+  jwt:
+    secret: test-secret-test-secret-test-secret-123
+
+eureka:
+  client:
+    enabled: false
+
+spring:
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            # Zaman aşımı testi hızlı bitsin
+            connect-timeout: 500
+            read-timeout: 800

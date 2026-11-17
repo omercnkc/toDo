@@ -68,7 +68,7 @@ services:
     depends_on:
       mysql: { condition: service_healthy }
       discovery-server: { condition: service_started }
-  # project-service, task-service, dashboard-service aynı kalıp
+  # project-service, task-service, dashboard-service aynı kalıp (dashboard-service DB'siz: yalnızca JWT_SECRET + Eureka, depends_on discovery-server)
   frontend:
     build: { context: ., dockerfile: frontend/Dockerfile }
     ports: ["4200:80"]

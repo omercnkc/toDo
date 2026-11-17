@@ -47,6 +47,8 @@ Spring Cloud Gateway: route'lar, JWT doğrulama filtresi (global), doğrulanan k
 
 ## dashboard-service (DB yok)
 Kullanıcının erişebildiği projeleri ve görev istatistiklerini Feign ile toplar, tek yanıtta döner. Önbellek (Caffeine, 30–60 sn) opsiyoneldir.
+- Altyapı (6-B): yalnızca doğrulayan JWT ile güvenlik zinciri (tüm uçlar USER/ADMIN; servis token'ı kabul edilmez, dahili ucu yok), Eureka kaydı, `ProjectClient` (`/internal/projects/memberships`) ve `TaskClient` (`/tasks/stats`) — kullanıcının token'ı common-lib interceptor'ıyla iletilir, kapsam/yetki kararı çağrılan serviste kalır. Hata dönüşümü `ProjectDirectory` / `TaskDirectory`'de: ulaşılamıyor, 5xx, zaman aşımı (bağlantı 2 sn, okuma 5 sn) veya beklenmeyen 4xx → 503 `PROJECT_SERVICE_UNAVAILABLE` / `TASK_SERVICE_UNAVAILABLE`; task-service'in 403'ü (`scope=all`, ADMIN değil) → 403 `STATS_SCOPE_FORBIDDEN`. Rol/durum metin olarak çözülür (project-service yeni değer eklerse dashboard bozulmasın), bilinmeyen alanlar yok sayılır.
+- Testler gerçek Feign çağrısıyla: sahte project/task-service JDK `HttpServer` ile, adresler Spring Cloud basit keşif istemcisinden (`spring.cloud.discovery.client.simple.instances.*`); token iletimi, JSON çözümü, zaman aşımı ve bağlantı reddi uçtan uca sınanır.
 İstatistik hesabı için task-service'te toplu uç sağlanır: `GET /tasks/stats?scope=mine|all` (proje başına durum sayıları, geciken, bana atanan açık görevler; 6-A) — tüm görevler çekilmez, `GROUP BY project_id, status` ile sayılır (100 bin görevli projede gateway üzerinden ~150 ms). Kapsam proje id listesiyle değil, task-service'in kendi yetki kuralıyla (üyelikler / ADMIN için tüm sistem) belirlenir: istemci başkasının projesini istemeye çalışamaz.
 
 ## Proje Kalıcı Silme – Outbox

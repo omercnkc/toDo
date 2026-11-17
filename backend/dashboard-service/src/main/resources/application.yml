@@ -4,6 +4,39 @@ server:
 spring:
   application:
     name: dashboard-service
+  config:
+    # Yerel geliştirmede repo kökündeki .env okunur (servis repo kökünden, backend/'den veya
+    # modül dizininden çalıştırılabilir). Docker imajında .env yoktur; değerler ortam değişkeninden gelir.
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+      - optional:file:../../.env[.properties]
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            # Bağımlı servis yanıt vermezse dashboard isteği uzun süre asılı kalmasın (→ 503 *_SERVICE_UNAVAILABLE)
+            connect-timeout: 2000
+            read-timeout: 5000
+  autoconfigure:
+    # Kullanıcı deposu yok (kimlik JWT'den gelir); Boot'un bellek içi kullanıcısına gerek yok
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+dashboard:
+  jwt:
+    # auth-service ile aynı anahtar; bu servis token üretmez, yalnızca doğrular. Boşsa servis açılmaz.
+    secret: ${JWT_SECRET:}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    registry-fetch-interval-seconds: 10
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
 
 management:
   endpoints:

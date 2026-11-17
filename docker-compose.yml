@@ -156,5 +156,27 @@ services:
       retries: 10
       start_period: 40s
 
+  dashboard-service:
+    build:
+      <<: *backend-build
+      args:
+        SERVICE: dashboard-service
+    environment:
+      # Veritabanı yok; project-service ve task-service'ten Feign ile toplar (kullanıcı token'ını iletir)
+      JWT_SECRET: ${JWT_SECRET:?.env içinde JWT_SECRET gerekli}
+      EUREKA_URL: http://discovery-server:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: dashboard-service
+      TZ: Europe/Istanbul
+    # Port yayınlanmaz: yalnızca gateway üzerinden erişilir (docs/03)
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
 volumes:
   mysql_data:
