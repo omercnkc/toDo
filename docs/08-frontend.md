@@ -85,7 +85,7 @@ Uygulama notları (4-F):
 Uygulama notları (4-G):
 - Görev modalı (`TaskModalComponent`): Bootstrap modal görünümü Angular ile çizilir (Bootstrap JS/ng-bootstrap yok); odak `cdkTrapFocus` ile modalda, açılışta başlık alanında, kapanınca açan karta döner; Esc ve arka plana tıklama kapatır; `body.modal-open` sayfa kaydırmasını kilitler; mobilde tam ekran. Oluşturma (TODO sonuna), görüntüleme/düzenleme, silme (onaylı; yalnızca `canDelete`). Düzenlemede **durum** seçilebilir: sürükle-bırakın klavye karşılığı (önce PUT, durum değiştiyse `PATCH /status` → yeni kolonun sonu). Atanan seçenekleri proje üyeleri; artık üye olmayan atanan "Kullanıcı #id (üye değil)" olarak korunur. Arşivde salt okunur. 4xx alan hataları alanların altında; 404/409'da pano da yenilenir.
 - Kartlar odaklanabilir (`tabindex`, `role=button`); tıklama veya Enter modalı açar. Sürüklemenin sonunda tarayıcının ürettiği tıklama `cdkDragEnded` + bir tur gecikmeyle yok sayılır.
-- Filtre çubuğu (istemci tarafı, `board-filter.ts`): arama (başlık+açıklama, Türkçe harf duyarsız), atanan (herkes / bana atanan / atanmamış / kişi), öncelik; kolon rozeti filtreliyken "görünen / toplam". Filtre açıkken sürükleme **yalnızca kolon değiştirir** (görev hedefin sonuna; kolon içi bırakma yok sayılır), görevin gerçek yeri tüm board'da aranır. Sunucu tarafı liste/arama/sayfalama Faz 5'te.
+- Filtre çubuğu (istemci tarafı, `board-filter.ts`): arama (başlık+açıklama, Türkçe harf duyarsız), atanan (herkes / bana atanan / atanmamış / kişi), öncelik; kolon rozeti filtreliyken "görünen / toplam". Filtre açıkken sürükleme **yalnızca kolon değiştirir** (görev hedefin sonuna; kolon içi bırakma yok sayılır), görevin gerçek yeri tüm board'da aranır. Sunucu tarafı arama/filtre/sayfalama liste görünümünde (5-C, 5-D).
 - Proje detayında yalnızca OWNER/ADMIN'e "Projeyi kalıcı sil" bölümü: onay için proje adı yazılır (`prompt`), başarıda `/projects`'e dönülür; görevler sunucuda outbox ile temizlenir. `notBlank` doğrulayıcısı ortak `validators.ts`'e taşındı.
 
 Uygulama notları (5-C) – görev listesi (`/projects/:id/tasks`):
@@ -95,6 +95,14 @@ Uygulama notları (5-C) – görev listesi (`/projects/:id/tasks`):
 - Satır/kart tıklama veya Enter → Kanban'daki `TaskModalComponent`; kayıt/silme sonrası aynı sayfa yeniden yüklenir. Arşivde "Yeni görev" yok, modal salt okunur.
 - Proje bağlamı (proje + üyeler) yalnızca proje değişince yüklenir; atanan adı üye listesinden eşlenir.
 - Pano ↔ Liste geçişi `TaskViewSwitchComponent` (bağlantı, `aria-current`); proje detayında "Görev listesi" düğmesi. Öncelik/durum rozet stilleri global (`styles.scss`), Kanban ve liste ortak kullanır.
+
+Uygulama notları (5-D) – arama ve filtreler:
+- URL tek doğruluk kaynağı: kontroller yalnızca URL'yi değiştirir, liste URL'den okunur (`?q=&status=TODO,DONE&priority=HIGH&assignee=me|none|<id>&dueFrom=&dueTo=&overdue=1&sort=&page=`). Boş filtreler yazılmaz; bozuk değerler atılır, ters tarih aralığı yer değiştirir, çoklu değerler sabit sıraya dizilir (aynı filtre = aynı URL).
+- Arama: 300 ms `debounceTime` + `distinctUntilChanged`, `replaceUrl` (her harf geçmişe eklenmez); geri tuşunda kutu URL'yi izler. Diğer filtreler geçmişe eklenir: geri tuşu önceki filtreye döner. Her filtre değişikliği 1. sayfaya döner, sıralamayı korur. Yeni sorgu eski isteği iptal eder.
+- Durum ve öncelik çoklu seçim (`btn-check` düğmeleri; seçim içinde VEYA, filtreler arasında VE); atanan: herkes / bana atanan / atanmamış / üyeler (listede olmayan id — projeden çıkarılmış kişi — "Kullanıcı #id" olarak yine seçili görünür); bitiş tarihi aralığı (`min`/`max` ile; ters düşerse diğer uç boşalır); "yalnızca gecikmiş".
+- `assignee=me` URL'de "me" kalır (paylaşılan bağlantıyı açan kendi görevlerini görür); istekte kullanıcı id'sine çevrilir. Kimlik bilinmiyorsa istek gönderilmez, sonuç boştur (Kanban 4-G'de yakalanan hatanın karşılığı).
+- `<select>` seçimi seçeneklerde `[selected]` ile: select'in `[value]` bağlaması `*ngFor`/`*ngIf` ile sonradan eklenen seçenekten önce uygulanıp kayboluyordu (URL'den gelen `assignee=99`).
+- Mobilde arama her zaman görünür, filtreler "Filtreler (n)" düğmesiyle açılır (`aria-expanded`); masaüstünde panel hep açık. Filtreli sonuç boşsa "Filtreye uyan görev yok" + "Filtreleri temizle" (sıralama korunur); başlıkta "(filtreli)".
 
 ## Reaktif Yapı (RxJS)
 - Servis tabanlı state: `BehaviorSubject` + `asObservable()`; ağır kütüphane (NgRx) ilk sürümde yok.

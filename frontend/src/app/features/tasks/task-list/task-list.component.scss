@@ -52,3 +52,21 @@
   font-weight: 500;
   overflow-wrap: anywhere;
 }
+
+// Mobilde filtreler "Filtreler" düğmesiyle açılır (arama her zaman görünür); masaüstünde her zaman açık
+.filter-panel {
+  display: none;
+
+  &.open {
+    display: flex;
+  }
+
+  @media (min-width: 768px) {
+    display: flex;
+  }
+
+  legend {
+    float: none;
+    width: auto;
+  }
+}

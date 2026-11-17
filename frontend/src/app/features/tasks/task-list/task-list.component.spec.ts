@@ -1,12 +1,13 @@
 import { A11yModule } from '@angular/cdk/a11y';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
 
 import { Page } from '../../../core/models/page.model';
+import { AuthService } from '../../../core/auth/auth.service';
 import { Project, ProjectMember } from '../../../core/models/project.model';
 import { Task, TaskListParams } from '../../../core/models/task.model';
 import { ProjectService } from '../../../core/services/project.service';
@@ -44,6 +45,7 @@ describe('TaskListComponent', () => {
   let projects: jasmine.SpyObj<ProjectService>;
   let router: Router;
   let queryParams: BehaviorSubject<ParamMap>;
+  let currentUserId: number | null;
 
   async function create(params: Record<string, string> = {}): Promise<void> {
     queryParams = new BehaviorSubject(convertToParamMap(params));
@@ -54,6 +56,7 @@ describe('TaskListComponent', () => {
         { provide: TaskService, useValue: tasks },
         { provide: ProjectService, useValue: projects },
         { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['success', 'error']) },
+        { provide: AuthService, useValue: { currentUser: currentUserId === null ? null : { id: currentUserId } } },
         {
           provide: ActivatedRoute,
           useValue: { parent: { paramMap: of(convertToParamMap({ id: '7' })) }, queryParamMap: queryParams },
@@ -76,13 +79,20 @@ describe('TaskListComponent', () => {
     return tasks.list.calls.mostRecent().args[0];
   }
 
+  /** Son gezinmenin URL'de kalan (null olmayan) parametreleri. */
   function navigatedParams(): Record<string, unknown> {
-    return (router.navigate as jasmine.Spy).calls.mostRecent().args[1].queryParams;
+    const params = (router.navigate as jasmine.Spy).calls.mostRecent().args[1].queryParams;
+    return Object.fromEntries(Object.entries(params).filter(([, v]) => v !== null));
+  }
+
+  function navigatedReplace(): boolean {
+    return !!(router.navigate as jasmine.Spy).calls.mostRecent().args[1].replaceUrl;
   }
 
   beforeEach(() => {
     tasks = jasmine.createSpyObj<TaskService>('TaskService', ['list', 'create', 'update', 'changeStatus', 'delete']);
     projects = jasmine.createSpyObj<ProjectService>('ProjectService', ['get', 'members']);
+    currentUserId = 1;
     projects.get.and.returnValue(of(PROJECT));
     projects.members.and.returnValue(of(MEMBERS));
     tasks.list.and.returnValue(
@@ -132,14 +142,14 @@ describe('TaskListComponent', () => {
       Array.from(el().querySelectorAll<HTMLButtonElement>('th .sort-button')).find((b) => b.textContent!.includes(label))!;
 
     header('Öncelik').click();
-    expect(navigatedParams()).toEqual({ sort: 'priority,desc', page: null });
+    expect(navigatedParams()).toEqual({ sort: 'priority,desc' });
 
     queryParams.next(convertToParamMap({ sort: 'priority,desc' }));
     header('Öncelik').click();
-    expect(navigatedParams()).toEqual({ sort: 'priority,asc', page: null });
+    expect(navigatedParams()).toEqual({ sort: 'priority,asc' });
 
     header('Oluşturulma').click();
-    expect(navigatedParams()).withContext('varsayılana (en yeni) dönünce URL temizlenir').toEqual({ sort: null, page: null });
+    expect(navigatedParams()).withContext('varsayılana (en yeni) dönünce URL temizlenir').toEqual({});
   });
 
   it('URL değişince yeniden ister, aynı sorgu için tekrar istemez', async () => {
@@ -164,14 +174,15 @@ describe('TaskListComponent', () => {
     )!;
     next.click();
 
-    expect(navigatedParams()).toEqual({ sort: null, page: 2 });
+    expect(navigatedParams()).toEqual({ page: 2 });
   });
 
   it('boş kalan sayfadan son sayfaya geçer (replace değil, yeni sorgu)', async () => {
     tasks.list.and.returnValue(of(page([], 3, 41)));
     await create({ page: '4' });
 
-    expect(navigatedParams()).toEqual({ sort: null, page: 3 });
+    expect(navigatedParams()).toEqual({ page: 3 });
+    expect(navigatedReplace()).withContext('düzeltme geçmişe eklenmez').toBeTrue();
   });
 
   it('mobil sıralama seçimi', async () => {
@@ -181,7 +192,7 @@ describe('TaskListComponent', () => {
 
     component.selectSort(String(component.sortOptions.findIndex((o) => o.label === 'Bitiş tarihi (yakın)')));
 
-    expect(navigatedParams()).toEqual({ sort: 'dueDate,asc', page: null });
+    expect(navigatedParams()).toEqual({ sort: 'dueDate,asc' });
   });
 
   it('satıra tıklama ve Enter modalı açar; değişiklikten sonra aynı sayfa yeniden yüklenir', async () => {
@@ -255,5 +266,134 @@ describe('TaskListComponent', () => {
     const current = el().querySelector('app-task-view-switch [aria-current="page"]');
     expect(current?.textContent?.trim()).toBe('Liste');
     expect(current?.getAttribute('href')).toBe('/projects/7/tasks');
+  });
+
+  // ---------- 5-D: arama ve filtreler ----------
+
+  it('URL\'deki filtreler isteğe ve kontrollere yansır', async () => {
+    await create({ q: 'rapor', status: 'TODO,DONE', priority: 'HIGH', assignee: 'none', dueFrom: '2026-11-01', dueTo: '2026-11-30', overdue: '1' });
+
+    const p = lastListCall();
+    expect(p.q).toBe('rapor');
+    expect(p.status).toEqual(['TODO', 'DONE']);
+    expect(p.priority).toEqual(['HIGH']);
+    expect(p.assigneeId).toBe('none');
+    expect(p.dueFrom).toBe('2026-11-01');
+    expect(p.dueTo).toBe('2026-11-30');
+    expect(p.overdue).toBeTrue();
+    const e = el();
+    expect(e.querySelector<HTMLInputElement>('#task-search')!.value).toBe('rapor');
+    expect(e.querySelector<HTMLInputElement>('#f-status-TODO')!.checked).toBeTrue();
+    expect(e.querySelector<HTMLInputElement>('#f-status-IN_PROGRESS')!.checked).toBeFalse();
+    expect(e.querySelector<HTMLInputElement>('#f-priority-HIGH')!.checked).toBeTrue();
+    expect(e.querySelector<HTMLSelectElement>('#f-assignee')!.value).toBe('none');
+    expect(e.querySelector<HTMLInputElement>('#f-due-from')!.value).toBe('2026-11-01');
+    expect(e.querySelector<HTMLInputElement>('#f-overdue')!.checked).toBeTrue();
+    expect(e.textContent).toContain('(filtreli)');
+  });
+
+  it('arama 300 ms bekler, geçmişe eklemez, sayfayı sıfırlar ve sıralamayı korur', fakeAsync(() => {
+    void create({ sort: 'title,asc', page: '3' });
+    tick();
+    const input = el().querySelector<HTMLInputElement>('#task-search')!;
+
+    input.value = 'ra';
+    input.dispatchEvent(new Event('input'));
+    tick(100);
+    input.value = 'rapor ';
+    input.dispatchEvent(new Event('input'));
+    tick(299);
+    expect(router.navigate).not.toHaveBeenCalled();
+    tick(1);
+
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    expect(navigatedParams()).toEqual({ q: 'rapor', sort: 'title,asc' });
+    expect(navigatedReplace()).toBeTrue();
+  }));
+
+  it('durum/öncelik aç-kapa, atanan, gecikmiş: URL\'ye yazılır ve geçmişe eklenir', async () => {
+    await create({ status: 'DONE', page: '2' });
+
+    el().querySelector<HTMLInputElement>('#f-status-TODO')!.click();
+    expect(navigatedParams()).toEqual({ status: 'TODO,DONE' });
+    expect(navigatedReplace()).toBeFalse();
+
+    el().querySelector<HTMLInputElement>('#f-status-DONE')!.click();
+    expect(navigatedParams()).withContext('son seçim kalkınca filtre yok').toEqual({});
+
+    el().querySelector<HTMLInputElement>('#f-priority-LOW')!.click();
+    expect(navigatedParams()).toEqual({ status: 'DONE', priority: 'LOW' });
+
+    const select = el().querySelector<HTMLSelectElement>('#f-assignee')!;
+    select.value = 'me';
+    select.dispatchEvent(new Event('change'));
+    expect(navigatedParams()).toEqual({ status: 'DONE', assignee: 'me' });
+
+    el().querySelector<HTMLInputElement>('#f-overdue')!.click();
+    expect(navigatedParams()).toEqual({ status: 'DONE', overdue: 1 });
+  });
+
+  it('atanan seçenekleri: herkes, bana atanan, atanmamış, üyeler ve listede olmayan kişi', async () => {
+    await create({ assignee: '99' });
+    const options = Array.from(el().querySelectorAll<HTMLOptionElement>('#f-assignee option')).map((o) => o.textContent!.trim());
+    expect(options).toEqual(['Herkes', 'Bana atanan', 'Atanmamış', 'Ayşe Yılmaz', 'Kullanıcı #99']);
+    expect(el().querySelector<HTMLSelectElement>('#f-assignee')!.value).toBe('99');
+  });
+
+  it('"bana atanan" kullanıcı id\'sine çevrilir; kimlik bilinmiyorsa istek atılmaz ve liste boş', async () => {
+    await create({ assignee: 'me' });
+    expect(lastListCall().assigneeId).toBe(1);
+  });
+
+  it('"bana atanan" + kimlik yok: istek yok, boş sonuç', async () => {
+    currentUserId = null;
+    await create({ assignee: 'me' });
+    expect(tasks.list).not.toHaveBeenCalled();
+    expect(el().textContent).toContain('Filtreye uyan görev yok');
+  });
+
+  it('tarih aralığı ters düşerse diğer uç boşalır', async () => {
+    await create({ dueFrom: '2026-11-10', dueTo: '2026-11-20' });
+
+    component.setDueFrom('2026-11-25');
+    expect(navigatedParams()).toEqual({ dueFrom: '2026-11-25' });
+
+    component.setDueTo('2026-11-05');
+    expect(navigatedParams()).toEqual({ dueTo: '2026-11-05' });
+
+    component.setDueTo('2026-11-15');
+    expect(navigatedParams()).toEqual({ dueFrom: '2026-11-10', dueTo: '2026-11-15' });
+  });
+
+  it('filtreye uyan görev yoksa açıklanır; temizle filtreleri kaldırır, sıralamayı korur', async () => {
+    tasks.list.and.returnValue(of(page([])));
+    await create({ q: 'yok', priority: 'LOW', sort: 'title,desc' });
+
+    expect(el().textContent).toContain('Filtreye uyan görev yok');
+    expect(el().textContent).not.toContain('Henüz görev yok');
+    Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent!.includes('Filtreleri temizle'))!.click();
+
+    expect(navigatedParams()).toEqual({ sort: 'title,desc' });
+    expect(component.search.value).toBe('');
+  });
+
+  it('geri tuşu: arama kutusu URL\'yi izler', async () => {
+    await create({ q: 'eski' });
+    queryParams.next(convertToParamMap({ q: 'yeni' }));
+    expect(el().querySelector<HTMLInputElement>('#task-search')!.value).toBe('yeni');
+    queryParams.next(convertToParamMap({}));
+    expect(el().querySelector<HTMLInputElement>('#task-search')!.value).toBe('');
+  });
+
+  it('mobil filtre düğmesi açık filtre sayısını gösterir ve paneli açar', async () => {
+    await create({ q: 'a', status: 'TODO', overdue: '1' });
+    const toggle = Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent!.includes('Filtreler'))!;
+    expect(toggle.textContent!.replace(/\s+/g, '')).toBe('Filtreler3');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+    toggle.click();
+
+    expect(el().querySelector('#task-filter-panel')!.classList).toContain('open');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
   });
 });

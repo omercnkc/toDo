@@ -32,7 +32,7 @@
     <div class="min-w-0">
       <h1 class="h3 mb-1 text-break">{{ project.name }}</h1>
       <div class="small text-muted">
-        Görev listesi · {{ result.totalElements }} görev
+        Görev listesi · {{ result.totalElements }} görev<span *ngIf="filterCount > 0"> (filtreli)</span>
         <span *ngIf="loading" class="ms-2" role="status">
           <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Yükleniyor…
         </span>
@@ -48,16 +48,120 @@
     Bu proje arşivde: görevler görüntülenebilir ama değiştirilemez.
   </div>
 
+  <!-- Arama + filtreler (sunucu tarafı; değerler URL'de) -->
+  <form class="task-filters card shadow-sm border-0 mb-3" role="search" aria-label="Görevleri ara ve filtrele" (submit)="$event.preventDefault()">
+    <div class="card-body p-3">
+      <div class="d-flex gap-2">
+        <div class="flex-grow-1">
+          <label for="task-search" class="visually-hidden">Ara</label>
+          <input
+            id="task-search"
+            type="search"
+            class="form-control"
+            placeholder="Başlık veya açıklamada ara"
+            autocomplete="off"
+            [maxlength]="searchMax"
+            [formControl]="search"
+          />
+        </div>
+        <button
+          type="button"
+          class="btn btn-outline-secondary d-md-none text-nowrap"
+          aria-controls="task-filter-panel"
+          [attr.aria-expanded]="filtersOpen"
+          (click)="filtersOpen = !filtersOpen"
+        >
+          Filtreler<span *ngIf="filterCount > 0" class="badge bg-primary ms-1">{{ filterCount }}</span>
+        </button>
+      </div>
+
+      <div id="task-filter-panel" class="filter-panel row g-3 mt-0" [class.open]="filtersOpen">
+        <fieldset class="col-12 col-md-auto">
+          <legend class="form-label small mb-1">Durum</legend>
+          <div class="d-flex flex-wrap gap-1">
+            <ng-container *ngFor="let status of statuses">
+              <input
+                type="checkbox"
+                class="btn-check"
+                [id]="'f-status-' + status"
+                [checked]="filters.status.includes(status)"
+                (change)="toggleStatus(status)"
+              />
+              <label class="btn btn-sm btn-outline-secondary" [for]="'f-status-' + status">{{ statusLabels[status] }}</label>
+            </ng-container>
+          </div>
+        </fieldset>
+
+        <fieldset class="col-12 col-md-auto">
+          <legend class="form-label small mb-1">Öncelik</legend>
+          <div class="d-flex flex-wrap gap-1">
+            <ng-container *ngFor="let priority of priorities">
+              <input
+                type="checkbox"
+                class="btn-check"
+                [id]="'f-priority-' + priority"
+                [checked]="filters.priority.includes(priority)"
+                (change)="togglePriority(priority)"
+              />
+              <label class="btn btn-sm btn-outline-secondary" [for]="'f-priority-' + priority">{{ priorityLabels[priority] }}</label>
+            </ng-container>
+          </div>
+        </fieldset>
+
+        <div class="col-12 col-sm-6 col-md">
+          <label for="f-assignee" class="form-label small mb-1">Atanan</label>
+          <!-- Seçim [selected] ile: select'in [value]'su sonradan eklenen (*ngFor/*ngIf) seçenekten önce uygulanıp kayboluyor -->
+          <select id="f-assignee" class="form-select form-select-sm" (change)="setAssignee($any($event.target).value)">
+            <option value="" [selected]="filters.assignee === ''">Herkes</option>
+            <option value="me" [selected]="filters.assignee === 'me'">Bana atanan</option>
+            <option value="none" [selected]="filters.assignee === 'none'">Atanmamış</option>
+            <option *ngFor="let member of members" [value]="'' + member.userId" [selected]="filters.assignee === '' + member.userId">
+              {{ member.fullName || 'Kullanıcı #' + member.userId }}
+            </option>
+            <option *ngIf="unknownAssignee as id" [value]="id" selected>Kullanıcı #{{ id }}</option>
+          </select>
+        </div>
+
+        <fieldset class="col-12 col-sm-6 col-md-auto">
+          <legend class="form-label small mb-1">Bitiş tarihi</legend>
+          <div class="d-flex align-items-center gap-1">
+            <label for="f-due-from" class="visually-hidden">Bitiş tarihi başlangıcı</label>
+            <input id="f-due-from" type="date" class="form-control form-control-sm" [value]="filters.dueFrom" [max]="filters.dueTo || null" (change)="setDueFrom($any($event.target).value)" />
+            <span class="text-muted" aria-hidden="true">–</span>
+            <label for="f-due-to" class="visually-hidden">Bitiş tarihi sonu</label>
+            <input id="f-due-to" type="date" class="form-control form-control-sm" [value]="filters.dueTo" [min]="filters.dueFrom || null" (change)="setDueTo($any($event.target).value)" />
+          </div>
+        </fieldset>
+
+        <div class="col-12 col-md-auto d-flex align-items-end gap-3">
+          <div class="form-check mb-1">
+            <input id="f-overdue" type="checkbox" class="form-check-input" [checked]="filters.overdue" (change)="setFilters({ overdue: $any($event.target).checked })" />
+            <label for="f-overdue" class="form-check-label small">Yalnızca gecikmiş</label>
+          </div>
+          <button type="button" class="btn btn-sm btn-link px-0" [disabled]="filterCount === 0" (click)="clearFilters()">Temizle</button>
+        </div>
+      </div>
+    </div>
+  </form>
+
   <!-- Mobil: sıralama seçimi (tablo başlıkları yok) -->
   <div class="d-md-none mb-2">
     <label for="task-sort" class="form-label small mb-1">Sırala</label>
-    <select id="task-sort" class="form-select" [value]="selectedSortIndex" (change)="selectSort($any($event.target).value)">
-      <option *ngIf="selectedSortIndex < 0" value="-1" disabled>Özel sıralama</option>
-      <option *ngFor="let option of sortOptions; let i = index" [value]="i">{{ option.label }}</option>
+    <select id="task-sort" class="form-select" (change)="selectSort($any($event.target).value)">
+      <option *ngIf="selectedSortIndex < 0" value="-1" disabled selected>Özel sıralama</option>
+      <option *ngFor="let option of sortOptions; let i = index" [value]="i" [selected]="i === selectedSortIndex">{{ option.label }}</option>
     </select>
   </div>
 
-  <div *ngIf="result.totalElements === 0" class="card shadow-sm border-0">
+  <div *ngIf="result.totalElements === 0 && filterCount > 0" class="card shadow-sm border-0" [class.is-loading]="loading">
+    <div class="card-body p-5 text-center" role="status">
+      <h2 class="h5">Filtreye uyan görev yok</h2>
+      <p class="text-muted mb-3">Aramayı değiştirmeyi ya da bazı filtreleri kaldırmayı dene.</p>
+      <button type="button" class="btn btn-outline-secondary" (click)="clearFilters()">Filtreleri temizle</button>
+    </div>
+  </div>
+
+  <div *ngIf="result.totalElements === 0 && filterCount === 0" class="card shadow-sm border-0">
     <div class="card-body p-5 text-center">
       <h2 class="h5">Henüz görev yok</h2>
       <p class="text-muted mb-3">{{ readOnly ? 'Bu projede görev yok.' : 'İlk görevi oluşturarak başla.' }}</p>

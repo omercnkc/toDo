@@ -1,8 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { combineLatest, forkJoin, Observable, of, Subject } from 'rxjs';
-import { catchError, distinctUntilChanged, map, switchMap, takeUntil, tap } from 'rxjs/operators';
+import { catchError, debounceTime, distinctUntilChanged, map, switchMap, takeUntil, tap } from 'rxjs/operators';
+
+import { AuthService } from '../../../core/auth/auth.service';
 
 import { Page } from '../../../core/models/page.model';
 import { displayName, Project, ProjectMember } from '../../../core/models/project.model';
@@ -10,19 +13,29 @@ import {
   isOverdue,
   localToday,
   Task,
+  TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
   TASK_STATUS_LABELS,
+  TASK_STATUSES,
+  TASK_TITLE_MAX,
+  TaskPriority,
   TaskSort,
   TaskSortField,
+  TaskStatus,
 } from '../../../core/models/task.model';
 import { ProjectService } from '../../../core/services/project.service';
 import { TaskService } from '../../../core/services/task.service';
 import {
-  DEFAULT_SORT,
+  activeFilterCount,
+  AssigneeFilter,
+  DEFAULT_QUERY,
+  EMPTY_FILTERS,
   nextSort,
   sameQuery,
-  TASK_PAGE_SIZE,
+  TaskFilters,
   TaskListQuery,
+  toApiParams,
+  toggleValue,
   toQueryParams,
   toTaskListQuery,
 } from './task-list-query';
@@ -35,10 +48,13 @@ interface SortOption {
 }
 
 /**
- * Görev listesi (`/projects/:id/tasks`, docs/08): sunucu tarafı sıralama ve sayfalama.
+ * Görev listesi (`/projects/:id/tasks`, docs/08): sunucu tarafı arama, filtre, sıralama ve sayfalama.
  *
- * - Sıralama ve sayfa URL'de (`?sort=dueDate,asc&page=2`): yenileme, geri tuşu ve paylaşılan bağlantı aynı
- *   listeyi açar. Yeni sorgu eski isteği iptal eder (`switchMap`).
+ * - Filtreler, sıralama ve sayfa URL'de (`task-list-query.ts`); URL tek doğruluk kaynağıdır: kontroller yalnızca
+ *   URL'yi değiştirir, liste URL'den okunur. Yenileme, geri tuşu ve paylaşılan bağlantı aynı listeyi açar.
+ *   Yeni sorgu eski isteği iptal eder (`switchMap`). Filtre değişince 1. sayfaya dönülür.
+ * - Arama 300 ms bekler ve geçmişe yeni kayıt eklemez (`replaceUrl`): her harf geri tuşunda bir adım olmasın.
+ *   Diğer filtreler geçmişe eklenir (geri tuşu önceki filtreye döner).
  * - Masaüstünde tablo (sütun başlığına tıklayınca sıralar, `aria-sort`), mobilde kart + sıralama seçimi.
  * - Satıra tıklayınca (veya Enter) Kanban'daki görev modalı açılır; değişiklikten sonra aynı sayfa yeniden
  *   yüklenir (sayfa boşaldıysa son sayfaya geçilir).
@@ -51,6 +67,13 @@ interface SortOption {
 })
 export class TaskListComponent implements OnInit, OnDestroy {
   readonly statusLabels = TASK_STATUS_LABELS;
+  readonly statuses = TASK_STATUSES;
+  readonly priorities = TASK_PRIORITIES;
+  readonly searchMax = TASK_TITLE_MAX;
+  readonly search = new FormControl('');
+  readonly currentUserId = this.auth.currentUser?.id ?? null;
+  /** Mobilde filtre paneli açık mı (masaüstünde her zaman açık). */
+  filtersOpen = false;
   readonly priorityLabels = TASK_PRIORITY_LABELS;
   readonly today = localToday();
   readonly columns: { field: TaskSortField; label: string }[] = [
@@ -77,7 +100,7 @@ export class TaskListComponent implements OnInit, OnDestroy {
   project: Project | null = null;
   members: ProjectMember[] = [];
   result: Page<Task> | null = null;
-  query: TaskListQuery = { sort: DEFAULT_SORT, page: 0 };
+  query: TaskListQuery = DEFAULT_QUERY;
   loading = true;
   error: TaskListError | null = null;
 
@@ -93,6 +116,7 @@ export class TaskListComponent implements OnInit, OnDestroy {
     private readonly projects: ProjectService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
+    private readonly auth: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -101,7 +125,16 @@ export class TaskListComponent implements OnInit, OnDestroy {
       map((params) => Number(params.get('id'))),
       distinctUntilChanged(),
     );
-    const query$ = this.route.queryParamMap.pipe(map(toTaskListQuery), distinctUntilChanged(sameQuery));
+    const query$ = this.route.queryParamMap.pipe(
+      map(toTaskListQuery),
+      distinctUntilChanged(sameQuery),
+      tap((query) => {
+        // Geri tuşu / bağlantı: kutu URL'yi izler (yazarken kendi değeri zaten aynıdır)
+        if ((this.search.value ?? '').trim() !== query.filters.q) {
+          this.search.setValue(query.filters.q, { emitEvent: false });
+        }
+      }),
+    );
 
     combineLatest([projectId$, query$])
       .pipe(
@@ -116,6 +149,68 @@ export class TaskListComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$),
       )
       .subscribe();
+
+    this.search.valueChanges
+      .pipe(
+        map((value: string | null) => (value ?? '').trim()),
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$),
+      )
+      .subscribe((q) => {
+        if (q !== this.query.filters.q) {
+          this.setFilters({ q }, true);
+        }
+      });
+  }
+
+  // ---------- filtreler ----------
+
+  get filters(): TaskFilters {
+    return this.query.filters;
+  }
+
+  get filterCount(): number {
+    return activeFilterCount(this.query.filters);
+  }
+
+  /** Bir filtreyi değiştirir; sayfa sıfırlanır, sıralama korunur. */
+  setFilters(change: Partial<TaskFilters>, replaceUrl = false): void {
+    this.navigate({ ...this.query, filters: { ...this.query.filters, ...change }, page: 0 }, replaceUrl);
+  }
+
+  toggleStatus(status: TaskStatus): void {
+    this.setFilters({ status: toggleValue(this.query.filters.status, status, TASK_STATUSES) });
+  }
+
+  togglePriority(priority: TaskPriority): void {
+    this.setFilters({ priority: toggleValue(this.query.filters.priority, priority, TASK_PRIORITIES) });
+  }
+
+  setAssignee(value: string): void {
+    this.setFilters({ assignee: value as AssigneeFilter });
+  }
+
+  /** Tarih kutuları: tarayıcı boş ya da `yyyy-MM-dd` verir. Aralık ters düşerse diğer uç boşalır. */
+  setDueFrom(value: string): void {
+    const { dueTo } = this.query.filters;
+    this.setFilters({ dueFrom: value, dueTo: value && dueTo && value > dueTo ? '' : dueTo });
+  }
+
+  setDueTo(value: string): void {
+    const { dueFrom } = this.query.filters;
+    this.setFilters({ dueFrom: value && dueFrom && value < dueFrom ? '' : dueFrom, dueTo: value });
+  }
+
+  clearFilters(): void {
+    this.search.setValue('', { emitEvent: false });
+    this.setFilters({ ...EMPTY_FILTERS });
+  }
+
+  /** Seçili atanan üye listesinde yoksa (projeden çıkarılmış, elle yazılmış id) seçenek olarak yine gösterilir. */
+  get unknownAssignee(): string | null {
+    const a = this.query.filters.assignee;
+    return a && a !== 'me' && a !== 'none' && !this.membersById.has(Number(a)) ? a : null;
   }
 
   get readOnly(): boolean {
@@ -131,14 +226,14 @@ export class TaskListComponent implements OnInit, OnDestroy {
   }
 
   sortBy(field: TaskSortField): void {
-    this.navigate({ sort: nextSort(this.query.sort, field), page: 0 });
+    this.navigate({ ...this.query, sort: nextSort(this.query.sort, field), page: 0 });
   }
 
   /** Mobil seçim: değer `sortOptions` index'i. */
   selectSort(index: string): void {
     const option = this.sortOptions[Number(index)];
     if (option) {
-      this.navigate({ sort: option.sort, page: 0 });
+      this.navigate({ ...this.query, sort: option.sort, page: 0 });
     }
   }
 
@@ -205,8 +300,8 @@ export class TaskListComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private navigate(query: TaskListQuery): void {
-    void this.router.navigate([], { relativeTo: this.route, queryParams: toQueryParams(query) });
+  private navigate(query: TaskListQuery, replaceUrl = false): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: toQueryParams(query), replaceUrl });
   }
 
   /** Proje bağlamı (proje + üyeler) yalnızca proje değişince; liste her sorguda. */
@@ -235,16 +330,15 @@ export class TaskListComponent implements OnInit, OnDestroy {
           );
 
     return context$.pipe(
-      switchMap(() =>
-        this.tasks.list(
-          { projectId: id, sort: [query.sort], page: query.page, size: TASK_PAGE_SIZE },
-          true,
-        ),
-      ),
+      switchMap(() => {
+        const params = toApiParams(query, id, this.currentUserId);
+        // "Bana atanan" ama kimlik bilinmiyor: kimseyi gösterme (atanmamışları ya da herkesi değil)
+        return params ? this.tasks.list(params, true) : of(emptyPage<Task>());
+      }),
       tap((result) => {
         // Son sayfadaki görev silindiyse vb.: boş bir sayfada kalma
         if (result.content.length === 0 && query.page > 0 && result.totalPages > 0) {
-          this.navigate({ ...query, page: result.totalPages - 1 });
+          this.navigate({ ...query, page: result.totalPages - 1 }, true);
           return;
         }
         this.result = result;
@@ -263,9 +357,14 @@ export class TaskListComponent implements OnInit, OnDestroy {
   }
 }
 
+function emptyPage<T>(): Page<T> {
+  return { content: [], page: 0, size: 0, totalElements: 0, totalPages: 0 };
+}
+
+/** 400 (geçersiz filtre) proje hatası sayılmaz: URL zaten temizlendiği için beklenmez, "tekrar dene" gösterilir. */
 function toListError(error: unknown): TaskListError {
   if (error instanceof HttpErrorResponse) {
-    if (error.status === 404 || error.status === 400) {
+    if (error.status === 404) {
       return 'notFound';
     }
     if (error.status === 403) {
