@@ -65,6 +65,36 @@ export interface UpdateTaskRequest {
   dueDate: string | null;
 }
 
+/** `GET /api/tasks` sıralanabilir alanları (docs/06 "Liste filtreleri"). */
+export type TaskSortField = 'title' | 'status' | 'priority' | 'dueDate' | 'createdAt';
+export type SortDirection = 'asc' | 'desc';
+
+export interface TaskSort {
+  field: TaskSortField;
+  direction: SortDirection;
+}
+
+/**
+ * `GET /api/tasks` parametreleri. Boş alan gönderilmez. `projectId` yoksa üye olunan tüm projeler.
+ * Çok değerli filtreler (status, priority) virgülle birleştirilir.
+ */
+export interface TaskListParams {
+  projectId?: number;
+  status?: readonly TaskStatus[];
+  priority?: readonly TaskPriority[];
+  /** Kullanıcı id'si veya `none` (atanmamış). */
+  assigneeId?: number | 'none';
+  q?: string;
+  /** `yyyy-MM-dd`, dahil */
+  dueFrom?: string;
+  dueTo?: string;
+  overdue?: boolean;
+  /** Öncelik sırasına göre; boşsa sunucu varsayılanı (en yeniler önce). */
+  sort?: readonly TaskSort[];
+  page?: number;
+  size?: number;
+}
+
 /** Bitiş tarihi bugünden önce ve görev tamamlanmamış. `today`: `yyyy-MM-dd` (yerel gün). */
 export function isOverdue(task: Pick<Task, 'dueDate' | 'status'>, today: string): boolean {
   return !!task.dueDate && task.status !== 'DONE' && task.dueDate < today;

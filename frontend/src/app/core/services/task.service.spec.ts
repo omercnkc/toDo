@@ -26,6 +26,46 @@ describe('TaskService', () => {
     req.flush({ TODO: [], IN_PROGRESS: [], DONE: [] });
   });
 
+  it('list: boş filtreler gönderilmez, çok değerliler virgüllü, sort tekrarlı', () => {
+    service.list({ projectId: 7, page: 0, size: 20, q: '  ', status: [], sort: [] }).subscribe();
+    const plain = http.expectOne((r) => r.url === '/api/tasks');
+    expect(plain.request.params.keys().sort()).toEqual(['page', 'projectId', 'size']);
+    expect(plain.request.context.get(SKIP_ERROR_TOAST)).toBeFalse();
+    plain.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
+
+    service
+      .list(
+        {
+          status: ['TODO', 'DONE'],
+          priority: ['HIGH'],
+          assigneeId: 'none',
+          q: ' rapor ',
+          dueFrom: '2026-11-01',
+          dueTo: '2026-11-30',
+          overdue: true,
+          sort: [
+            { field: 'priority', direction: 'desc' },
+            { field: 'title', direction: 'asc' },
+          ],
+        },
+        true,
+      )
+      .subscribe();
+    const req = http.expectOne((r) => r.url === '/api/tasks');
+    const p = req.request.params;
+    expect(p.has('projectId')).toBeFalse();
+    expect(p.get('status')).toBe('TODO,DONE');
+    expect(p.get('priority')).toBe('HIGH');
+    expect(p.get('assigneeId')).toBe('none');
+    expect(p.get('q')).toBe('rapor');
+    expect(p.get('dueFrom')).toBe('2026-11-01');
+    expect(p.get('dueTo')).toBe('2026-11-30');
+    expect(p.get('overdue')).toBe('true');
+    expect(p.getAll('sort')).toEqual(['priority,desc', 'title,asc']);
+    expect(req.request.context.get(SKIP_ERROR_TOAST)).toBeTrue();
+    req.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
+  });
+
   it('move: PATCH /move {status, position}', () => {
     service.move(42, 'DONE', 3).subscribe();
 

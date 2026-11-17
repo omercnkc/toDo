@@ -88,6 +88,14 @@ Uygulama notları (4-G):
 - Filtre çubuğu (istemci tarafı, `board-filter.ts`): arama (başlık+açıklama, Türkçe harf duyarsız), atanan (herkes / bana atanan / atanmamış / kişi), öncelik; kolon rozeti filtreliyken "görünen / toplam". Filtre açıkken sürükleme **yalnızca kolon değiştirir** (görev hedefin sonuna; kolon içi bırakma yok sayılır), görevin gerçek yeri tüm board'da aranır. Sunucu tarafı liste/arama/sayfalama Faz 5'te.
 - Proje detayında yalnızca OWNER/ADMIN'e "Projeyi kalıcı sil" bölümü: onay için proje adı yazılır (`prompt`), başarıda `/projects`'e dönülür; görevler sunucuda outbox ile temizlenir. `notBlank` doğrulayıcısı ortak `validators.ts`'e taşındı.
 
+Uygulama notları (5-C) – görev listesi (`/projects/:id/tasks`):
+- Sunucu tarafı sıralama ve sayfalama (`TaskService.list`, sayfa başına 20). Sıralama ve sayfa URL'de: `?sort=dueDate,asc&page=2` (sayfa 1 tabanlı; varsayılan `createdAt,desc` ve 1. sayfa yazılmaz). URL ↔ sorgu dönüşümü saf fonksiyonlarda (`task-list-query.ts`); bozuk değerler sessizce varsayılana döner. Yenileme, geri tuşu ve paylaşılan bağlantı aynı listeyi açar; yeni sorgu eski isteği iptal eder (`switchMap`).
+- Arayüz tek sütuna göre sıralar (sunucu birden fazlasını destekler). Sütun başlığı düğmedir (`aria-sort`); ilk tıklamada metin/durum/bitiş artan, öncelik/oluşturulma azalan; aynı sütuna tekrar tıklamak yönü çevirir; sıralama değişince 1. sayfaya dönülür.
+- Masaüstünde tablo, mobilde (`< md`) kart listesi + "Sırala" seçimi. Yeni sayfa yüklenirken eski sonuç soluk kalır (titreme yok). Boş kalan sayfadan (son görev silindi) son sayfaya geçilir.
+- Satır/kart tıklama veya Enter → Kanban'daki `TaskModalComponent`; kayıt/silme sonrası aynı sayfa yeniden yüklenir. Arşivde "Yeni görev" yok, modal salt okunur.
+- Proje bağlamı (proje + üyeler) yalnızca proje değişince yüklenir; atanan adı üye listesinden eşlenir.
+- Pano ↔ Liste geçişi `TaskViewSwitchComponent` (bağlantı, `aria-current`); proje detayında "Görev listesi" düğmesi. Öncelik/durum rozet stilleri global (`styles.scss`), Kanban ve liste ortak kullanır.
+
 ## Reaktif Yapı (RxJS)
 - Servis tabanlı state: `BehaviorSubject` + `asObservable()`; ağır kütüphane (NgRx) ilk sürümde yok.
 - Arama kutusu: `valueChanges.pipe(debounceTime(300), distinctUntilChanged(), switchMap(...))`.

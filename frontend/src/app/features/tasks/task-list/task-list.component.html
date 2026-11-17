@@ -1,0 +1,166 @@
+<nav aria-label="Konum" class="mb-2">
+  <a *ngIf="projectId > 0" [routerLink]="['/projects', projectId]" class="small text-decoration-none">‹ Proje</a>
+</nav>
+
+<div *ngIf="loading && !result && !error" class="d-flex align-items-center gap-2 text-muted" role="status">
+  <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+  Görevler yükleniyor…
+</div>
+
+<!-- Hata durumları -->
+<div *ngIf="error" class="card shadow-sm border-0">
+  <div class="card-body p-5 text-center" [ngSwitch]="error">
+    <ng-container *ngSwitchCase="'notFound'">
+      <h1 class="h5">Proje bulunamadı</h1>
+      <p class="text-muted">Proje silinmiş ya da adres hatalı olabilir.</p>
+    </ng-container>
+    <ng-container *ngSwitchCase="'forbidden'">
+      <h1 class="h5">Bu projeye erişimin yok</h1>
+      <p class="text-muted">Görevleri yalnızca proje üyeleri görebilir. Projeden çıkarılmış olabilirsin.</p>
+    </ng-container>
+    <ng-container *ngSwitchDefault>
+      <h1 class="h5">Görevler yüklenemedi</h1>
+      <p class="text-muted">Bağlantını kontrol edip tekrar dene.</p>
+      <button type="button" class="btn btn-outline-secondary me-2" (click)="retry()">Tekrar dene</button>
+    </ng-container>
+    <a routerLink="/projects" class="btn btn-primary">Projelerime dön</a>
+  </div>
+</div>
+
+<ng-container *ngIf="project && result && !error">
+  <header class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div class="min-w-0">
+      <h1 class="h3 mb-1 text-break">{{ project.name }}</h1>
+      <div class="small text-muted">
+        Görev listesi · {{ result.totalElements }} görev
+        <span *ngIf="loading" class="ms-2" role="status">
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Yükleniyor…
+        </span>
+      </div>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <app-task-view-switch [projectId]="projectId" active="list"></app-task-view-switch>
+      <button *ngIf="!readOnly" type="button" class="btn btn-primary" (click)="openNew()">+ Yeni görev</button>
+    </div>
+  </header>
+
+  <div *ngIf="readOnly" class="alert alert-secondary" role="status">
+    Bu proje arşivde: görevler görüntülenebilir ama değiştirilemez.
+  </div>
+
+  <!-- Mobil: sıralama seçimi (tablo başlıkları yok) -->
+  <div class="d-md-none mb-2">
+    <label for="task-sort" class="form-label small mb-1">Sırala</label>
+    <select id="task-sort" class="form-select" [value]="selectedSortIndex" (change)="selectSort($any($event.target).value)">
+      <option *ngIf="selectedSortIndex < 0" value="-1" disabled>Özel sıralama</option>
+      <option *ngFor="let option of sortOptions; let i = index" [value]="i">{{ option.label }}</option>
+    </select>
+  </div>
+
+  <div *ngIf="result.totalElements === 0" class="card shadow-sm border-0">
+    <div class="card-body p-5 text-center">
+      <h2 class="h5">Henüz görev yok</h2>
+      <p class="text-muted mb-3">{{ readOnly ? 'Bu projede görev yok.' : 'İlk görevi oluşturarak başla.' }}</p>
+      <button *ngIf="!readOnly" type="button" class="btn btn-primary" (click)="openNew()">+ Yeni görev</button>
+    </div>
+  </div>
+
+  <ng-container *ngIf="result.totalElements > 0">
+    <!-- Masaüstü: tablo -->
+    <div class="card shadow-sm border-0 d-none d-md-block" [class.is-loading]="loading">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 task-table">
+          <caption class="visually-hidden">
+            {{ project.name }} görevleri, {{ rangeText }}
+          </caption>
+          <thead>
+            <tr>
+              <th *ngFor="let column of columns" scope="col" [attr.aria-sort]="ariaSort(column.field)" [ngClass]="'col-' + column.field">
+                <button type="button" class="sort-button" (click)="sortBy(column.field)">
+                  {{ column.label }}
+                  <span class="sort-indicator" aria-hidden="true">
+                    {{ query.sort.field === column.field ? (query.sort.direction === 'asc' ? '▲' : '▼') : '↕' }}
+                  </span>
+                </button>
+              </th>
+              <th scope="col">Atanan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let task of result.content; trackBy: trackTask"
+              class="task-row"
+              tabindex="0"
+              [attr.data-task-id]="task.id"
+              [attr.aria-label]="task.title + ' — ayrıntılar'"
+              (click)="open(task)"
+              (keydown.enter)="open(task)"
+            >
+              <td class="task-title text-break">{{ task.title }}</td>
+              <td><span class="badge status-badge" [ngClass]="'status-' + task.status">{{ statusLabels[task.status] }}</span></td>
+              <td><span class="badge priority-badge" [ngClass]="'priority-' + task.priority">{{ priorityLabels[task.priority] }}</span></td>
+              <td class="text-nowrap">
+                <span *ngIf="task.dueDate; else noDue" [class.text-danger]="overdue(task)" [class.fw-semibold]="overdue(task)">
+                  {{ task.dueDate | date: 'dd.MM.yyyy' }}<span *ngIf="overdue(task)"> · gecikti</span>
+                </span>
+                <ng-template #noDue><span class="text-muted">—</span></ng-template>
+              </td>
+              <td class="text-nowrap text-muted small">{{ task.createdAt | date: 'dd.MM.yyyy' }}</td>
+              <td>
+                <span *ngIf="assigneeName(task) as name; else unassigned" class="d-inline-flex align-items-center gap-2 min-w-0">
+                  <app-avatar [name]="name" size="sm"></app-avatar>
+                  <span class="text-truncate">{{ name }}</span>
+                </span>
+                <ng-template #unassigned><span class="text-muted">Atanmamış</span></ng-template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Mobil: kartlar -->
+    <ul class="list-unstyled d-md-none mb-0 task-cards" [class.is-loading]="loading">
+      <li *ngFor="let task of result.content; trackBy: trackTask" class="mb-2">
+        <article
+          class="card shadow-sm border-0 task-card"
+          tabindex="0"
+          role="button"
+          [attr.data-task-id]="task.id"
+          [attr.aria-label]="task.title + ' — ayrıntılar'"
+          (click)="open(task)"
+          (keydown.enter)="open(task)"
+        >
+          <div class="card-body p-3">
+            <div class="d-flex align-items-start justify-content-between gap-2">
+              <h2 class="h6 mb-2 text-break">{{ task.title }}</h2>
+              <span class="badge priority-badge" [ngClass]="'priority-' + task.priority">{{ priorityLabels[task.priority] }}</span>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2 small">
+              <span class="badge status-badge" [ngClass]="'status-' + task.status">{{ statusLabels[task.status] }}</span>
+              <span *ngIf="task.dueDate" [class.text-danger]="overdue(task)" [class.fw-semibold]="overdue(task)">
+                {{ task.dueDate | date: 'dd.MM.yyyy' }}<span *ngIf="overdue(task)"> · gecikti</span>
+              </span>
+              <span class="text-muted ms-auto text-truncate">{{ assigneeName(task) ?? 'Atanmamış' }}</span>
+            </div>
+          </div>
+        </article>
+      </li>
+    </ul>
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+      <span class="small text-muted" aria-live="polite">{{ rangeText }}</span>
+      <app-pagination [page]="query.page" [totalPages]="result.totalPages" label="Görev sayfaları" (pageChange)="goToPage($event)"></app-pagination>
+    </div>
+  </ng-container>
+</ng-container>
+
+<app-task-modal
+  *ngIf="modalTask !== undefined"
+  [projectId]="projectId"
+  [task]="modalTask"
+  [members]="members"
+  [readOnly]="readOnly"
+  (changed)="onTaskChanged()"
+  (closed)="closeModal()"
+></app-task-modal>

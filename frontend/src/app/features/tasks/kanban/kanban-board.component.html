@@ -38,7 +38,10 @@
         </span>
       </div>
     </div>
-    <button *ngIf="!readOnly" type="button" class="btn btn-primary" (click)="openNew()">+ Yeni görev</button>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <app-task-view-switch [projectId]="projectId" active="board"></app-task-view-switch>
+      <button *ngIf="!readOnly" type="button" class="btn btn-primary" (click)="openNew()">+ Yeni görev</button>
+    </div>
   </header>
 
   <div *ngIf="readOnly" class="alert alert-secondary" role="status">

@@ -20,3 +20,41 @@ body {
 .form-card {
   max-width: 48rem;
 }
+
+// ---------- Görev rozetleri (Kanban kartı, görev listesi) ----------
+// Bootstrap 5.2'de *-subtle sınıfları yok; kontrastlı açık zeminler (WCAG AA)
+.priority-badge,
+.status-badge {
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.priority-HIGH {
+  background-color: #f8d7da;
+  color: #842029;
+}
+
+.priority-MEDIUM {
+  background-color: #fff3cd;
+  color: #664d03;
+}
+
+.priority-LOW {
+  background-color: #e2e3e5;
+  color: #41464b;
+}
+
+.status-TODO {
+  background-color: #e2e3e5;
+  color: #41464b;
+}
+
+.status-IN_PROGRESS {
+  background-color: #cfe2ff;
+  color: #084298;
+}
+
+.status-DONE {
+  background-color: #d1e7dd;
+  color: #0f5132;
+}

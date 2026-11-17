@@ -16,6 +16,7 @@ import { TaskService } from '../../../core/services/task.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { SharedModule } from '../../../shared/shared.module';
 import { TaskModalComponent } from '../task-modal/task-modal.component';
+import { TaskViewSwitchComponent } from '../view-switch/task-view-switch.component';
 import { KanbanBoardComponent } from './kanban-board.component';
 
 const PROJECT: Project = {
@@ -70,7 +71,7 @@ describe('KanbanBoardComponent', () => {
   async function create(): Promise<void> {
     await TestBed.configureTestingModule({
       imports: [RouterTestingModule, SharedModule, DragDropModule, ScrollingModule, ReactiveFormsModule, A11yModule],
-      declarations: [KanbanBoardComponent, TaskModalComponent],
+      declarations: [KanbanBoardComponent, TaskModalComponent, TaskViewSwitchComponent],
       providers: [
         { provide: TaskService, useValue: tasks },
         { provide: ProjectService, useValue: projects },

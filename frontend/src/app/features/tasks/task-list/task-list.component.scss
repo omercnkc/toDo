@@ -1,0 +1,54 @@
+// Yeni sayfa yüklenirken eski sonuç kalır, soluklaşır (titreme yok)
+.is-loading {
+  opacity: 0.6;
+  transition: opacity 0.15s ease-in;
+}
+
+.task-table {
+  th {
+    white-space: nowrap;
+    font-size: 0.875rem;
+  }
+
+  .col-title {
+    width: 40%;
+  }
+}
+
+// Sütun başlığı düğme gibi görünmesin ama klavyeyle odaklanabilsin
+.sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-weight: 600;
+  color: inherit;
+
+  &:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+    border-radius: 0.125rem;
+  }
+}
+
+.sort-indicator {
+  font-size: 0.7rem;
+  color: var(--bs-gray-600);
+}
+
+.task-row,
+.task-card {
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: -2px;
+  }
+}
+
+.task-title {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}

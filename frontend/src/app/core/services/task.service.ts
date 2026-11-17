@@ -4,7 +4,8 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { SKIP_ERROR_TOAST } from '../interceptors/http-context.tokens';
-import { Board, CreateTaskRequest, Task, TaskStatus, UpdateTaskRequest } from '../models/task.model';
+import { Page } from '../models/page.model';
+import { Board, CreateTaskRequest, Task, TaskListParams, TaskStatus, UpdateTaskRequest } from '../models/task.model';
 
 /** `/api/tasks/**` (docs/06 "task-service"). Yetki backend'de; arayüz `canDelete`'e göre düğme gösterir. */
 @Injectable({ providedIn: 'root' })
@@ -21,6 +22,34 @@ export class TaskService {
     const params = new HttpParams().set('projectId', projectId);
     const context = new HttpContext().set(SKIP_ERROR_TOAST, silent);
     return this.http.get<Board>(`${this.tasksUrl}/board`, { params, context });
+  }
+
+  /**
+   * Filtreli, sıralı, sayfalı liste (docs/06 "Liste filtreleri"). Boş filtreler gönderilmez.
+   * @param silent true → 403/404 için genel bildirim gösterilmez (sayfa hatayı kendisi yazar)
+   */
+  list(query: TaskListParams, silent = false): Observable<Page<Task>> {
+    let params = new HttpParams();
+    const set = (key: string, value: string | number | null | undefined) => {
+      if (value !== null && value !== undefined && value !== '') {
+        params = params.set(key, value);
+      }
+    };
+    set('projectId', query.projectId);
+    set('status', query.status?.join(','));
+    set('priority', query.priority?.join(','));
+    set('assigneeId', query.assigneeId);
+    set('q', query.q?.trim());
+    set('dueFrom', query.dueFrom);
+    set('dueTo', query.dueTo);
+    set('overdue', query.overdue ? 'true' : null);
+    for (const sort of query.sort ?? []) {
+      params = params.append('sort', `${sort.field},${sort.direction}`);
+    }
+    set('page', query.page);
+    set('size', query.size);
+    const context = new HttpContext().set(SKIP_ERROR_TOAST, silent);
+    return this.http.get<Page<Task>>(this.tasksUrl, { params, context });
   }
 
   get(id: number): Observable<Task> {

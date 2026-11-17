@@ -62,27 +62,6 @@
   padding: 1rem 0;
 }
 
-.priority-badge {
-  flex-shrink: 0;
-  font-weight: 500;
-}
-
-// Bootstrap 5.2'de *-subtle sınıfları yok; kontrastlı açık zeminler
-.priority-HIGH {
-  background-color: #f8d7da;
-  color: #842029;
-}
-
-.priority-MEDIUM {
-  background-color: #fff3cd;
-  color: #664d03;
-}
-
-.priority-LOW {
-  background-color: #e2e3e5;
-  color: #41464b;
-}
-
 // ---------- CDK drag-drop ----------
 
 .kanban-placeholder {

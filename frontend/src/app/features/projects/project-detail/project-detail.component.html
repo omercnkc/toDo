@@ -44,6 +44,7 @@
     </div>
     <div class="d-flex flex-wrap gap-2">
       <a [routerLink]="['/projects', project.id, 'board']" class="btn btn-primary">Kanban panosu</a>
+      <a [routerLink]="['/projects', project.id, 'tasks']" class="btn btn-outline-primary">Görev listesi</a>
       <ng-container *ngIf="project.canManage">
         <ng-container *ngIf="project.status === 'ACTIVE'; else archivedActions">
           <a [routerLink]="['/projects', project.id, 'edit']" class="btn btn-outline-primary">Düzenle</a>
