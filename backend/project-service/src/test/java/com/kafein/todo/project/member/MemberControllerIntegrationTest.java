@@ -187,6 +187,28 @@ class MemberControllerIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    void dahiliTumProjelerYalnizcaAdmin() throws Exception {
+        long first = createProject("Tüm 1", false);
+        long second = createProject("Tüm 2", false);
+        perform(delete("/projects/" + second), owner).andExpect(status().isNoContent());
+
+        String json = perform(get("/internal/projects/all"), admin)
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        var list = objectMapper.readTree(json);
+        java.util.Map<Long, com.fasterxml.jackson.databind.JsonNode> byId = new java.util.HashMap<>();
+        list.forEach(p -> byId.put(p.get("id").asLong(), p));
+        assertThat(byId.get(first).get("name").asText()).isEqualTo("Tüm 1");
+        assertThat(byId.get(first).get("status").asText()).isEqualTo("ACTIVE");
+        assertThat(byId.get(second).get("status").asText()).isEqualTo("ARCHIVED");
+        assertThat(list.size()).as("sistemdeki tüm projeler").isEqualTo((int) projects.count());
+
+        perform(get("/internal/projects/all"), owner).andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("ADMIN_ONLY"));
+        mvc.perform(get("/internal/projects/all")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void dahiliUyeliklerRolVeProjeDurumuyla() throws Exception {
         long first = createProject("Üyelik 1", true);
         long second = createProject("Üyelik 2", true);

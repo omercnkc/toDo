@@ -8,6 +8,8 @@ import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -21,7 +23,11 @@ public final class StubServer implements AutoCloseable {
     public record Received(String pathAndQuery, String authorization) {
     }
 
+    private record Response(int status, String body) {
+    }
+
     private final List<Received> received = new CopyOnWriteArrayList<>();
+    private final Map<String, Response> routes = new ConcurrentHashMap<>();
     private final int port;
     private HttpServer server;
     private volatile int status = 200;
@@ -43,6 +49,11 @@ public final class StubServer implements AutoCloseable {
         this.delayMillis = 0;
     }
 
+    /** Belirli bir yol (sorgu hariç) için yanıt; tanımlanmamış yollar {@link #respond} yanıtını alır. */
+    public void route(String path, int status, String body) {
+        routes.put(path, new Response(status, body));
+    }
+
     public void delay(long millis) {
         this.delayMillis = millis;
     }
@@ -54,6 +65,7 @@ public final class StubServer implements AutoCloseable {
     /** Her test başında: kayıtlar silinir, varsayılan yanıt, sunucu açık. */
     public synchronized void reset() {
         received.clear();
+        routes.clear();
         respond(200, "[]");
         start();
     }
@@ -89,9 +101,10 @@ public final class StubServer implements AutoCloseable {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
-                byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+                Response response = routes.getOrDefault(exchange.getRequestURI().getPath(), new Response(status, body));
+                byte[] bytes = response.body().getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
-                exchange.sendResponseHeaders(status, bytes.length);
+                exchange.sendResponseHeaders(response.status(), bytes.length);
                 try (OutputStream out = exchange.getResponseBody()) {
                     out.write(bytes);
                 }

@@ -2,29 +2,20 @@ package com.kafein.todo.dashboard;
 
 import com.kafein.todo.common.error.ApiException;
 import com.kafein.todo.common.security.AuthenticatedUser;
-import com.kafein.todo.common.security.JwtService;
 import com.kafein.todo.common.security.Role;
 import com.kafein.todo.dashboard.client.ProjectDirectory;
 import com.kafein.todo.dashboard.client.ProjectMembership;
 import com.kafein.todo.dashboard.client.TaskDirectory;
 import com.kafein.todo.dashboard.client.TaskStats;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.time.Duration;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,27 +26,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * 6-B altyapısı: güvenlik zinciri ve Feign client'ların gerçek HTTP çağrısı (sahte project/task-service'e,
- * {@link StubServer}). Servis adresleri Eureka yerine Spring Cloud'un basit keşif istemcisinden.
+ * {@link StubServer}). Directory'ler doğrudan çağrıldığı için gelen HTTP isteği simüle edilir.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-class DashboardServiceApplicationTests {
+class DashboardServiceApplicationTests extends DashboardTestSupport {
 
-    private static final String SECRET = "test-secret-test-secret-test-secret-123";
-    private static final JwtService JWT = new JwtService(SECRET, Duration.ofMinutes(15));
-    private static final StubServer PROJECT_SERVICE = start();
-    private static final StubServer TASK_SERVICE = start();
     private static final AuthenticatedUser USER = new AuthenticatedUser(7L, "ayse@ornek.com", Role.USER);
 
-    @DynamicPropertySource
-    static void services(DynamicPropertyRegistry registry) {
-        registry.add("spring.cloud.discovery.client.simple.instances.project-service[0].uri", PROJECT_SERVICE::uri);
-        registry.add("spring.cloud.discovery.client.simple.instances.task-service[0].uri", TASK_SERVICE::uri);
-    }
-
-    @Autowired
-    private MockMvc mvc;
     @Autowired
     private ProjectDirectory projects;
     @Autowired
@@ -63,22 +39,10 @@ class DashboardServiceApplicationTests {
 
     private String bearer;
 
-    private static StubServer start() {
-        return new StubServer();
-    }
-
-    @AfterAll
-    static void stop() {
-        PROJECT_SERVICE.close();
-        TASK_SERVICE.close();
-    }
-
     /** Feign interceptor'ı token'ı o anki HTTP isteğinden alır: isteği simüle et. */
     @BeforeEach
     void simulateIncomingRequest() {
-        PROJECT_SERVICE.reset();
-        TASK_SERVICE.reset();
-        bearer = "Bearer " + JWT.generateAccessToken(USER);
+        bearer = bearer(USER);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(HttpHeaders.AUTHORIZATION, bearer);
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
@@ -101,7 +65,7 @@ class DashboardServiceApplicationTests {
         mvc.perform(get("/dashboard/summary").header(HttpHeaders.AUTHORIZATION, "Bearer bozuk.token.degeri"))
                 .andExpect(status().isUnauthorized());
         mvc.perform(get("/actuator/health")).andExpect(status().isOk());
-        // Giriş yapmış kullanıcı: güvenlikten geçer, uç henüz yok (6-C) → ortak hata biçiminde 404
+        // Giriş yapmış kullanıcı: güvenlikten geçer; olmayan uç → ortak hata biçiminde 404
         mvc.perform(get("/dashboard/olmayan").header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));

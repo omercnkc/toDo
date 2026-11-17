@@ -92,7 +92,7 @@ Proje uçları uygulama notları (3-B):
 - `GET /projects/{id}/members` → `[{userId, email, fullName, enabled, role, joinedAt}]`, önce OWNER sonra katılma sırası, sayfasız. Ad/e-posta/aktiflik auth-service'ten tek toplu `lookup` çağrısıyla (200'lük parçalar). auth-service'e ulaşılamazsa liste yine 200 döner, bu üç alan `null` olur (arayüz "Kullanıcı #id" gösterir).
 - `DELETE /projects/{id}/members/{userId}` → 204. Hatalar: üye değil 404 `MEMBER_NOT_FOUND`, OWNER 409 `OWNER_CANNOT_BE_REMOVED`, arşivlenmiş proje 409 `PROJECT_ARCHIVED`. Çıkarılan kişiye bu projede atanmış görevlerin `assigneeId`'si outbox ile asenkron boşaltılır (genelde birkaç saniye).
 - `DELETE /projects/{id}?permanent=true` → 204 (OWNER/ADMIN; arşivde olması şart değil; geri alınamaz). Proje, üyeler ve davetler hemen silinir; görevler outbox ile asenkron temizlenir. Olmayan proje 404 `PROJECT_NOT_FOUND`.
-- Dahili uçlar (gateway'den erişilemez; geçerli bir kullanıcı token'ı yeterli): `GET /internal/projects/{id}/members/{userId}` → `{projectId, projectName, userId, role, projectStatus}` veya 404 `MEMBERSHIP_NOT_FOUND`; `GET /internal/projects/accessible?userId=` → proje id listesi; `GET /internal/projects/memberships?userId=` → `[{projectId, projectName, userId, role, projectStatus}]` (proje id'sine göre, arşivdekiler dahil).
+- Dahili uçlar (gateway'den erişilemez; geçerli bir kullanıcı token'ı yeterli): `GET /internal/projects/{id}/members/{userId}` → `{projectId, projectName, userId, role, projectStatus}` veya 404 `MEMBERSHIP_NOT_FOUND`; `GET /internal/projects/accessible?userId=` → proje id listesi; `GET /internal/projects/memberships?userId=` → `[{projectId, projectName, userId, role, projectStatus}]` (proje id'sine göre, arşivdekiler dahil); `GET /internal/projects/all` → `[{id, name, status}]` tüm projeler, yalnızca ADMIN token'ıyla (aksi 403 `ADMIN_ONLY`; dashboard "tüm sistem").
 - auth-service çağrıları hata verirse (davet gönderme gibi adın zorunlu olduğu yerlerde) 503 `USER_SERVICE_UNAVAILABLE`. Feign zaman aşımları: bağlantı 2 sn, okuma 5 sn.
 
 Davet yanıtı (3-D'de `respondedAt`, `invitee` ve kişilerde `email` eklendi):
@@ -177,14 +177,25 @@ Not: **Karar:** ilk sürümde task yanıtı yalnızca `assigneeId` döner; ad bi
 ## dashboard-service
 | Metot | Yol | Açıklama |
 |---|---|---|
-| GET | `/api/dashboard/summary` | Kullanıcıya özel özet |
+| GET | `/api/dashboard/summary?scope=mine\|all` | Kullanıcıya özel özet (`all` yalnızca ADMIN) |
 
 ```json
-{ "projectCount": 4, "taskTotals": { "TODO": 12, "IN_PROGRESS": 5, "DONE": 20 },
-  "overdueCount": 3, "myOpenTasks": 6,
-  "projects": [ { "id": 7, "name": "Web", "total": 18, "done": 9, "progressPercent": 50 } ],
-  "upcoming": [ { "id": 42, "title": "Login ekranı", "dueDate": "2026-11-20", "projectId": 7 } ] }
+{ "scope": "mine", "projectCount": 4, "activeProjectCount": 3, "archivedProjectCount": 1,
+  "taskTotals": { "todo": 12, "inProgress": 5, "done": 20 },
+  "totalTasks": 37, "openTasks": 17, "overdueCount": 3,
+  "assignedToMe": { "open": 6, "overdue": 1 },
+  "projects": [ { "id": 7, "name": "Web", "status": "ACTIVE", "myRole": "OWNER", "total": 18,
+                  "todo": 5, "inProgress": 4, "done": 9, "overdue": 1, "progressPercent": 50 } ],
+  "generatedAt": "2026-11-17T13:20:00Z" }
 ```
+Kurallar (6-C):
+- `scope=mine` (varsayılan, ADMIN dahil): üye olunan projeler. `scope=all`: tüm sistem, yalnızca ADMIN (USER → 403 `STATS_SCOPE_FORBIDDEN`, aşağı servislere çağrı gitmez); `myRole` null.
+- Toplamlar kapsamdaki **tüm** projeleri (arşivdekiler dahil) kapsar — görev listesindeki sayılarla birebir aynı olsun diye; arşivdeki projeler `status=ARCHIVED` ile ayırt edilir. `projects`: aktifler önce, sonra Türkçe ada göre, arşiv sonda.
+- `progressPercent` = tamamlanan / toplam, aşağı yuvarlanır (yalnızca hepsi bittiyse 100); görevsiz projede 0.
+- Proje listesinde olmayan projenin sayıları (kalıcı silinmiş, görevleri outbox ile henüz temizlenmemiş) alınmaz; toplamlar listedeki projelerden hesaplanır.
+- Önbellek: kullanıcı + rol + kapsam başına 30 sn (`dashboard.cache-ttl`, `DASHBOARD_CACHE_TTL`); görev değişikliği en geç bu sürede yansır, `generatedAt` hesaplama anıdır. Hatalar önbelleğe alınmaz.
+- Kısmi yanıt yok: project-service veya task-service'e ulaşılamazsa 503 `PROJECT_SERVICE_UNAVAILABLE` / `TASK_SERVICE_UNAVAILABLE` (önbellekteki özet bu sürede dönmeye devam eder).
+- Yaklaşan bitiş tarihleri ve bana atanan görev listeleri bu yanıtta yok: frontend bunları projeler arası `GET /api/tasks` ucundan alır (6-E).
 
 ## Dahili Uçlar
 Servisler arası uçlar (`/internal/**`) gateway'de **yönlendirilmez**; yalnızca ağ içinden ve servis JWT'si/iletilen kullanıcı token'ı ile çağrılır.

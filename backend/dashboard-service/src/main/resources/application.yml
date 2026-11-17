@@ -27,6 +27,8 @@ dashboard:
   jwt:
     # auth-service ile aynı anahtar; bu servis token üretmez, yalnızca doğrular. Boşsa servis açılmaz.
     secret: ${JWT_SECRET:}
+  # Özet önbelleği (kullanıcı + kapsam başına); görev değişikliği en geç bu sürede yansır. 0 = kapalı
+  cache-ttl: ${DASHBOARD_CACHE_TTL:30s}
 
 eureka:
   client:

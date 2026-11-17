@@ -1,8 +1,12 @@
 package com.kafein.todo.project.internal;
 
 import com.kafein.todo.common.error.ApiException;
+import com.kafein.todo.common.security.AuthenticatedUser;
 import com.kafein.todo.project.member.ProjectMember;
 import com.kafein.todo.project.member.ProjectMemberRepository;
+import com.kafein.todo.project.project.ProjectRepository;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,9 +26,25 @@ import java.util.List;
 public class InternalProjectController {
 
     private final ProjectMemberRepository members;
+    private final ProjectRepository projects;
 
-    public InternalProjectController(ProjectMemberRepository members) {
+    public InternalProjectController(ProjectMemberRepository members, ProjectRepository projects) {
         this.members = members;
+        this.projects = projects;
+    }
+
+    /**
+     * Sistemdeki tüm projeler (id, ad, durum), id'ye göre: dashboard'un ADMIN "tüm sistem" kapsamı (6-C).
+     * Çağıran servis kullanıcının token'ını iletir; yalnızca ADMIN'e açık (USER'ın token'ıyla tüm proje adları
+     * listelenemesin).
+     */
+    @GetMapping("/all")
+    @Transactional(readOnly = true)
+    public List<ProjectSummaryResponse> all(@AuthenticationPrincipal AuthenticatedUser user) {
+        if (!user.isAdmin()) {
+            throw ApiException.forbidden("ADMIN_ONLY", "Bu işlem yalnızca yöneticilere açık");
+        }
+        return projects.findAll(Sort.by("id")).stream().map(ProjectSummaryResponse::from).toList();
     }
 
     /**

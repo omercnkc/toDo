@@ -16,4 +16,8 @@ public interface ProjectClient {
     /** Kullanıcının tüm üyelikleri (proje adı, rol, proje durumu), proje id'sine göre; üyeliği yoksa boş. */
     @GetMapping("/internal/projects/memberships")
     List<ProjectMembership> memberships(@RequestParam("userId") long userId);
+
+    /** Sistemdeki tüm projeler (id, ad, durum); yalnızca ADMIN token'ıyla (değilse 403). */
+    @GetMapping("/internal/projects/all")
+    List<ProjectSummary> all();
 }

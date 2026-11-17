@@ -48,6 +48,7 @@ Spring Cloud Gateway: route'lar, JWT doğrulama filtresi (global), doğrulanan k
 ## dashboard-service (DB yok)
 Kullanıcının erişebildiği projeleri ve görev istatistiklerini Feign ile toplar, tek yanıtta döner. Önbellek (Caffeine, 30–60 sn) opsiyoneldir.
 - Altyapı (6-B): yalnızca doğrulayan JWT ile güvenlik zinciri (tüm uçlar USER/ADMIN; servis token'ı kabul edilmez, dahili ucu yok), Eureka kaydı, `ProjectClient` (`/internal/projects/memberships`) ve `TaskClient` (`/tasks/stats`) — kullanıcının token'ı common-lib interceptor'ıyla iletilir, kapsam/yetki kararı çağrılan serviste kalır. Hata dönüşümü `ProjectDirectory` / `TaskDirectory`'de: ulaşılamıyor, 5xx, zaman aşımı (bağlantı 2 sn, okuma 5 sn) veya beklenmeyen 4xx → 503 `PROJECT_SERVICE_UNAVAILABLE` / `TASK_SERVICE_UNAVAILABLE`; task-service'in 403'ü (`scope=all`, ADMIN değil) → 403 `STATS_SCOPE_FORBIDDEN`. Rol/durum metin olarak çözülür (project-service yeni değer eklerse dashboard bozulmasın), bilinmeyen alanlar yok sayılır.
+- Özet (6-C, `SummaryService`): proje listesi (USER: üyelikler; ADMIN `scope=all`: `/internal/projects/all`) ve `/tasks/stats` sanal thread'lerde paralel alınır; Feign interceptor'ı token'ı istek bağlamından okuduğu için `RequestContextHolder` çalışan thread'e taşınır. Caffeine önbelleği (anahtar kullanıcı + rol + kapsam, 30 sn; rol anahtarda: ADMIN yapılan kullanıcı eski kapsamla yanıt almaz). Kısmi yanıt verilmez (sayısız proje listesi "görev yok" gibi okunurdu).
 - Testler gerçek Feign çağrısıyla: sahte project/task-service JDK `HttpServer` ile, adresler Spring Cloud basit keşif istemcisinden (`spring.cloud.discovery.client.simple.instances.*`); token iletimi, JSON çözümü, zaman aşımı ve bağlantı reddi uçtan uca sınanır.
 İstatistik hesabı için task-service'te toplu uç sağlanır: `GET /tasks/stats?scope=mine|all` (proje başına durum sayıları, geciken, bana atanan açık görevler; 6-A) — tüm görevler çekilmez, `GROUP BY project_id, status` ile sayılır (100 bin görevli projede gateway üzerinden ~150 ms). Kapsam proje id listesiyle değil, task-service'in kendi yetki kuralıyla (üyelikler / ADMIN için tüm sistem) belirlenir: istemci başkasının projesini istemeye çalışamaz.
 
@@ -65,6 +66,6 @@ Tutarlılık: silme commit'inden sonra task-service'in üyelik kontrolü (Feign 
 | Client (sahibi) | Hedef uçlar |
 |---|---|
 | `AuthClient` (project, dashboard) | `GET /internal/users/{id}`, `POST /internal/users/lookup` |
-| `ProjectClient` (task, dashboard) | `GET /internal/projects/{id}/members/{userId}`, `GET /internal/projects/accessible`, `GET /internal/projects/memberships`, `GET /projects/{id}` |
+| `ProjectClient` (task, dashboard) | `GET /internal/projects/{id}/members/{userId}`, `GET /internal/projects/accessible`, `GET /internal/projects/memberships`, `GET /internal/projects/all` (dashboard, ADMIN), `GET /projects/{id}` |
 | `TaskClient` (project – yalnızca outbox relay) | `DELETE /internal/tasks/by-project/{id}` |
 | `TaskClient` (dashboard) | `GET /tasks/stats?scope=` (bana atanan/yaklaşan listeler frontend'de `GET /tasks` projeler arası ucuyla, 6-E) |
