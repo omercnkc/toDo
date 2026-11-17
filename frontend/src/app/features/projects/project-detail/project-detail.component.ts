@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, of, Subject } from 'rxjs';
 import { catchError, map, switchMap, takeUntil } from 'rxjs/operators';
 
@@ -40,7 +40,7 @@ export class ProjectDetailComponent implements OnInit, OnDestroy {
   error: DetailError | null = null;
   membersFailed = false;
   /** Süren işlemler (ilgili düğme kilitlenir). */
-  busy = { archive: false, removingUserId: null as number | null, invitingUserId: null as number | null, cancellingId: null as number | null };
+  busy = { archive: false, deleting: false, removingUserId: null as number | null, invitingUserId: null as number | null, cancellingId: null as number | null };
 
   private readonly reload$ = new Subject<void>();
   private readonly destroy$ = new Subject<void>();
@@ -50,6 +50,7 @@ export class ProjectDetailComponent implements OnInit, OnDestroy {
     private readonly auth: AuthService,
     private readonly toast: ToastService,
     private readonly route: ActivatedRoute,
+    private readonly router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -107,6 +108,45 @@ export class ProjectDetailComponent implements OnInit, OnDestroy {
     }
     this.busy.archive = true;
     this.run(this.projects.restore(project), `"${project.name}" arşivden çıkarıldı.`, () => (this.busy.archive = false));
+  }
+
+  /**
+   * Kalıcı silme: geri alınamaz olduğu için proje adının yazılması istenir. Proje hemen silinir, görevler
+   * sunucuda outbox ile birkaç saniye içinde temizlenir. Başarıda proje listesine dönülür.
+   */
+  deletePermanently(): void {
+    const project = this.project;
+    if (!project) {
+      return;
+    }
+    const typed = prompt(
+      `"${project.name}" kalıcı olarak silinecek: üyelikler, davetler ve tüm görevler de silinir, geri alınamaz.
+
+`
+      + 'Onaylamak için proje adını yaz:',
+    );
+    if (typed === null) {
+      return;
+    }
+    if (typed.trim() !== project.name) {
+      this.toast.error('Proje adı eşleşmedi; proje silinmedi.');
+      return;
+    }
+    this.busy.deleting = true;
+    this.projects.deletePermanently(project.id).subscribe({
+      next: () => {
+        this.busy.deleting = false;
+        this.toast.success(`"${project.name}" kalıcı olarak silindi.`);
+        void this.router.navigateByUrl('/projects');
+      },
+      error: (error: unknown) => {
+        this.busy.deleting = false;
+        if (error instanceof HttpErrorResponse && error.status > 0 && error.status < 500 && error.status !== 403) {
+          this.toast.error(extractApiError(error)?.message ?? 'Proje silinemedi.');
+        }
+        this.reload$.next();
+      },
+    });
   }
 
   // ---------- üyeler ----------

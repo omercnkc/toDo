@@ -41,3 +41,9 @@ export const PASSWORD_MAX_BYTES = 72;
 export function newPasswordValidators(): ValidatorFn[] {
   return [Validators.required, Validators.minLength(PASSWORD_MIN_LENGTH), maxUtf8Bytes(PASSWORD_MAX_BYTES)];
 }
+
+/** Yalnızca boşluktan oluşan değer: backend `@NotBlank` ile aynı kural (`required` hatası olarak gösterilir). */
+export function notBlank(control: AbstractControl): { required: true } | null {
+  const value: unknown = control.value;
+  return typeof value === 'string' && value.length > 0 && value.trim() === '' ? { required: true } : null;
+}

@@ -1,0 +1,134 @@
+<div class="modal-backdrop fade show"></div>
+<div
+  class="modal fade show d-block"
+  tabindex="-1"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="task-modal-title"
+  (click)="onBackdropClick($event)"
+>
+  <div class="modal-dialog modal-dialog-scrollable modal-lg modal-fullscreen-sm-down" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+    <form class="modal-content" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="task-modal-title">
+          {{ !isEdit ? 'Yeni görev' : readOnly ? 'Görev' : 'Görevi düzenle' }}
+        </h2>
+        <button type="button" class="btn-close" aria-label="Kapat" [disabled]="busy" (click)="close()"></button>
+      </div>
+
+      <div class="modal-body">
+        <div *ngIf="readOnly" class="alert alert-secondary" role="status">
+          Proje arşivde: görev görüntülenebilir ama değiştirilemez.
+        </div>
+        <div *ngIf="formError" class="alert alert-danger" role="alert">{{ formError }}</div>
+
+        <div class="mb-3">
+          <label for="task-title" class="form-label">Başlık</label>
+          <input
+            id="task-title"
+            type="text"
+            class="form-control"
+            formControlName="title"
+            autocomplete="off"
+            cdkFocusInitial
+            [attr.maxlength]="titleMax"
+            [class.is-invalid]="isInvalid('title')"
+            [attr.aria-invalid]="isInvalid('title')"
+            aria-describedby="task-title-error"
+          />
+          <app-field-error [control]="control('title')" errorId="task-title-error"></app-field-error>
+        </div>
+
+        <div class="mb-3">
+          <label for="task-description" class="form-label">
+            Açıklama <span class="text-muted fw-normal">(isteğe bağlı)</span>
+          </label>
+          <textarea
+            id="task-description"
+            class="form-control"
+            rows="4"
+            formControlName="description"
+            [class.is-invalid]="isInvalid('description')"
+            [attr.aria-invalid]="isInvalid('description')"
+            aria-describedby="task-description-hint task-description-error"
+          ></textarea>
+          <app-field-error [control]="control('description')" errorId="task-description-error"></app-field-error>
+          <div id="task-description-hint" class="form-text text-end" [class.text-danger]="descriptionLength > descriptionMax">
+            {{ descriptionLength }} / {{ descriptionMax }}
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label for="task-priority" class="form-label">Öncelik</label>
+            <select id="task-priority" class="form-select" formControlName="priority">
+              <option *ngFor="let priority of priorities" [value]="priority">{{ priorityLabels[priority] }}</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label for="task-assignee" class="form-label">Atanan</label>
+            <select
+              id="task-assignee"
+              class="form-select"
+              formControlName="assigneeId"
+              [class.is-invalid]="isInvalid('assigneeId')"
+              aria-describedby="task-assignee-error"
+            >
+              <option value="">Atanmamış</option>
+              <option *ngFor="let member of members" [value]="member.userId">{{ memberName(member) }}</option>
+              <option *ngIf="assigneeMissing" [value]="task!.assigneeId">Kullanıcı #{{ task!.assigneeId }} (üye değil)</option>
+            </select>
+            <app-field-error [control]="control('assigneeId')" errorId="task-assignee-error"></app-field-error>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label for="task-due" class="form-label">Bitiş tarihi <span class="text-muted fw-normal">(isteğe bağlı)</span></label>
+            <input
+              id="task-due"
+              type="date"
+              class="form-control"
+              formControlName="dueDate"
+              [class.is-invalid]="isInvalid('dueDate')"
+              aria-describedby="task-due-error"
+            />
+            <app-field-error [control]="control('dueDate')" errorId="task-due-error"></app-field-error>
+          </div>
+
+          <div *ngIf="isEdit" class="col-12 col-md-6">
+            <label for="task-status" class="form-label">Durum</label>
+            <select id="task-status" class="form-select" formControlName="status" aria-describedby="task-status-hint">
+              <option *ngFor="let status of statuses" [value]="status">{{ statusLabels[status] }}</option>
+            </select>
+            <div id="task-status-hint" class="form-text">Durum değişirse görev o kolonun sonuna eklenir.</div>
+          </div>
+        </div>
+
+        <p *ngIf="task" class="small text-muted mt-3 mb-0">
+          Oluşturan: {{ reporterName() }} · {{ task.createdAt | date: 'dd.MM.yyyy HH:mm' }}
+          <ng-container *ngIf="task.updatedAt !== task.createdAt"> · Son değişiklik {{ task.updatedAt | date: 'dd.MM.yyyy HH:mm' }}</ng-container>
+        </p>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          *ngIf="task?.canDelete && !readOnly"
+          type="button"
+          class="btn btn-outline-danger me-auto"
+          [disabled]="busy"
+          (click)="remove()"
+        >
+          <span *ngIf="deleting" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+          Sil
+        </button>
+        <button type="button" class="btn btn-outline-secondary" [disabled]="busy" (click)="close()">
+          {{ readOnly ? 'Kapat' : 'Vazgeç' }}
+        </button>
+        <button *ngIf="!readOnly" type="submit" class="btn btn-primary" [disabled]="busy">
+          <span *ngIf="submitting" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+          {{ submitting ? 'Kaydediliyor…' : isEdit ? 'Kaydet' : 'Görevi oluştur' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

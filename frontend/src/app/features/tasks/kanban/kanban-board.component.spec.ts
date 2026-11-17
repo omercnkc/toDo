@@ -1,17 +1,21 @@
+import { A11yModule } from '@angular/cdk/a11y';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of, Subject, throwError } from 'rxjs';
 
 import { Project, ProjectMember } from '../../../core/models/project.model';
 import { Board, Task, TaskStatus } from '../../../core/models/task.model';
+import { AuthService } from '../../../core/auth/auth.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { TaskService } from '../../../core/services/task.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { SharedModule } from '../../../shared/shared.module';
+import { TaskModalComponent } from '../task-modal/task-modal.component';
 import { KanbanBoardComponent } from './kanban-board.component';
 
 const PROJECT: Project = {
@@ -42,9 +46,12 @@ function seed(): Board {
   };
 }
 
-/** CDK'nın `drop` olayının bileşenin kullandığı kısmı. */
-function dropEvent(from: TaskStatus, previousIndex: number, to: TaskStatus, currentIndex: number): any {
-  return { previousContainer: { data: from }, container: { data: to }, previousIndex, currentIndex };
+/** CDK'nın `drop` olayının bileşenin kullandığı kısmı; sürüklenen görev ekranda görünen listeden. */
+function dropEvent(c: KanbanBoardComponent, from: TaskStatus, previousIndex: number, to: TaskStatus, currentIndex: number): any {
+  return {
+    previousContainer: { data: from }, container: { data: to }, previousIndex, currentIndex,
+    item: { data: c.view![from][previousIndex] },
+  };
 }
 
 function ids(board: Board | null, status: TaskStatus): number[] {
@@ -62,12 +69,13 @@ describe('KanbanBoardComponent', () => {
 
   async function create(): Promise<void> {
     await TestBed.configureTestingModule({
-      imports: [RouterTestingModule, SharedModule, DragDropModule, ScrollingModule],
-      declarations: [KanbanBoardComponent],
+      imports: [RouterTestingModule, SharedModule, DragDropModule, ScrollingModule, ReactiveFormsModule, A11yModule],
+      declarations: [KanbanBoardComponent, TaskModalComponent],
       providers: [
         { provide: TaskService, useValue: tasks },
         { provide: ProjectService, useValue: projects },
         { provide: ToastService, useValue: toast },
+        { provide: AuthService, useValue: { currentUser: { id: 1 } } },
         { provide: ActivatedRoute, useValue: { parent: { paramMap: of(convertToParamMap({ id: '7' })) } } },
       ],
     }).compileComponents();
@@ -86,7 +94,7 @@ describe('KanbanBoardComponent', () => {
   }
 
   beforeEach(() => {
-    tasks = jasmine.createSpyObj<TaskService>('TaskService', ['board', 'move']);
+    tasks = jasmine.createSpyObj<TaskService>('TaskService', ['board', 'move', 'create', 'update', 'changeStatus', 'delete']);
     projects = jasmine.createSpyObj<ProjectService>('ProjectService', ['get', 'members']);
     toast = jasmine.createSpyObj<ToastService>('ToastService', ['success', 'error']);
     projects.get.and.returnValue(of(PROJECT));
@@ -132,7 +140,7 @@ describe('KanbanBoardComponent', () => {
   it('sürükle-bırak iyimser: board hemen değişir, sonra taşıma gönderilir', async () => {
     await create();
 
-    component.drop(dropEvent('TODO', 0, 'IN_PROGRESS', 1));
+    component.drop(dropEvent(component, 'TODO', 0, 'IN_PROGRESS', 1));
 
     // Yanıt gelmeden ekranda yeni yerinde
     expect(ids(component.board, 'TODO')).toEqual([2, 3]);
@@ -153,14 +161,14 @@ describe('KanbanBoardComponent', () => {
   it('aynı yere bırakma istek göndermez', async () => {
     await create();
 
-    component.drop(dropEvent('TODO', 1, 'TODO', 1));
+    component.drop(dropEvent(component, 'TODO', 1, 'TODO', 1));
 
     expect(tasks.move).not.toHaveBeenCalled();
   });
 
   it('hata olursa eski hâline döner, mesaj gösterir ve panoyu sunucudan yeniler', async () => {
     await create();
-    component.drop(dropEvent('TODO', 0, 'DONE', 0));
+    component.drop(dropEvent(component, 'TODO', 0, 'DONE', 0));
     expect(ids(component.board, 'DONE')).toEqual([1]);
 
     moveResponses[0].error(new HttpErrorResponse({
@@ -176,7 +184,7 @@ describe('KanbanBoardComponent', () => {
 
   it('5xx hatasında bildirimi interceptor gösterir (çift bildirim yok), yine geri alınır', async () => {
     await create();
-    component.drop(dropEvent('TODO', 2, 'TODO', 0));
+    component.drop(dropEvent(component, 'TODO', 2, 'TODO', 0));
 
     moveResponses[0].error(new HttpErrorResponse({ status: 503 }));
 
@@ -187,8 +195,8 @@ describe('KanbanBoardComponent', () => {
   it('art arda taşımalar sırayla gönderilir; biri bitmeden diğeri gitmez', async () => {
     await create();
 
-    component.drop(dropEvent('TODO', 0, 'DONE', 0)); // 1 → DONE
-    component.drop(dropEvent('TODO', 0, 'DONE', 1)); // 2 → DONE sonu
+    component.drop(dropEvent(component, 'TODO', 0, 'DONE', 0)); // 1 → DONE
+    component.drop(dropEvent(component, 'TODO', 0, 'DONE', 1)); // 2 → DONE sonu
 
     expect(tasks.move).toHaveBeenCalledTimes(1);
     expect(ids(component.board, 'DONE')).toEqual([1, 2]);
@@ -206,8 +214,8 @@ describe('KanbanBoardComponent', () => {
 
   it('ilk taşıma başarısız ve ikincisi bekliyorsa: geri almaz, kuyruk bitince sunucudan yükler', async () => {
     await create();
-    component.drop(dropEvent('TODO', 0, 'DONE', 0));
-    component.drop(dropEvent('TODO', 0, 'DONE', 1));
+    component.drop(dropEvent(component, 'TODO', 0, 'DONE', 0));
+    component.drop(dropEvent(component, 'TODO', 0, 'DONE', 1));
 
     moveResponses[0].error(new HttpErrorResponse({ status: 404, error: { message: 'Görev bulunamadı' } }));
     expect(tasks.board).toHaveBeenCalledTimes(1); // ikinci taşıma sürerken yüklenmez
@@ -222,7 +230,7 @@ describe('KanbanBoardComponent', () => {
 
   it('sunucu görevi başka bir yere koyduysa pano yenilenir', async () => {
     await create();
-    component.drop(dropEvent('TODO', 0, 'IN_PROGRESS', 0));
+    component.drop(dropEvent(component, 'TODO', 0, 'IN_PROGRESS', 0));
 
     moveResponses[0].next(task(1, 'IN_PROGRESS', 1)); // arada başkası da taşımış
     moveResponses[0].complete();
@@ -234,7 +242,7 @@ describe('KanbanBoardComponent', () => {
     projects.get.and.returnValue(of({ ...PROJECT, status: 'ARCHIVED' }));
     await create();
 
-    component.drop(dropEvent('TODO', 0, 'DONE', 0));
+    component.drop(dropEvent(component, 'TODO', 0, 'DONE', 0));
 
     expect(tasks.move).not.toHaveBeenCalled();
     expect(el().textContent).toContain('Bu proje arşivde');
@@ -247,5 +255,100 @@ describe('KanbanBoardComponent', () => {
 
     expect(el().textContent).toContain('Bu projeye erişimin yok');
     expect(el().querySelector('.kanban-board')).toBeNull();
+  });
+
+  // ---------- filtre ----------
+
+  it('filtre: öncelik, atanan ve arama; sayılar "görünen / toplam"', async () => {
+    await create();
+
+    component.setFilter({ priority: 'HIGH' });
+    expect(column('TODO').querySelectorAll('.kanban-card').length).toBe(1);
+    expect(el().querySelector('h2')!.textContent!.replace(/\s+/g, ' ')).toContain('1 / 3');
+    expect(el().textContent).toContain('sürükleme yalnızca kolon değiştirir');
+
+    component.setFilter({ priority: '', assignee: 'me' });
+    expect(Array.from(column('TODO').querySelectorAll('[data-task-id]')).map((c) => c.getAttribute('data-task-id')))
+      .toEqual(['1']);
+
+    component.setFilter({ assignee: 'none' });
+    expect(column('TODO').querySelectorAll('.kanban-card').length).toBe(1); // görev 3
+    expect(column('IN_PROGRESS').querySelectorAll('.kanban-card').length).toBe(1);
+
+    component.setFilter({ assignee: '', search: 'GİRİŞ' }); // Türkçe büyük harf
+    expect(column('TODO').querySelectorAll('.kanban-card').length).toBe(1);
+    expect(column('IN_PROGRESS').textContent).toContain('Filtreye uyan görev yok');
+
+    component.clearFilter();
+    expect(column('TODO').querySelectorAll('.kanban-card').length).toBe(3);
+  });
+
+  it('filtre açıkken: başka kolona bırakılan görev hedefin sonuna eklenir, kolon içi sıralama yapılmaz', async () => {
+    await create();
+    component.setFilter({ assignee: 'none' }); // TODO: [3], IN_PROGRESS: [4]
+
+    component.drop(dropEvent(component, 'TODO', 0, 'TODO', 0));
+    expect(tasks.move).not.toHaveBeenCalled();
+
+    component.drop(dropEvent(component, 'IN_PROGRESS', 0, 'TODO', 0)); // görünende en üste bıraktı
+    expect(tasks.move).toHaveBeenCalledOnceWith(4, 'TODO', 3); // tüm kolonun sonu
+    component.clearFilter();
+    expect(ids(component.board, 'TODO')).toEqual([1, 2, 3, 4]);
+  });
+
+  // ---------- modal ----------
+
+  it('karta tıklayınca ve Enter ile görev modalı açılır; "Yeni görev" boş modal açar', async () => {
+    await create();
+
+    column('TODO').querySelector<HTMLElement>('[data-task-id="2"]')!.click();
+    expect(component.modalTask?.id).toBe(2);
+    expect(el().querySelector('app-task-modal')).not.toBeNull();
+    component.closeModal();
+    expect(el().querySelector('app-task-modal')).toBeNull();
+
+    column('TODO').querySelector<HTMLElement>('[data-task-id="3"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(component.modalTask?.id).toBe(3);
+    component.closeModal();
+
+    Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent?.includes('Yeni görev'))!
+      .click();
+    expect(component.modalTask).toBeNull();
+    expect(el().querySelector('#task-modal-title')!.textContent).toContain('Yeni görev');
+  });
+
+  it('sürüklemenin sonundaki tıklama modal açmaz', async () => {
+    await create();
+
+    component.onDragStarted();
+    component.onDragEnded();
+    component.open(seed().TODO[0]);
+    expect(component.modalTask).toBeUndefined();
+
+    await new Promise((resolve) => setTimeout(resolve));
+    component.open(seed().TODO[0]);
+    expect(component.modalTask?.id).toBe(1);
+  });
+
+  it('modal görevi değiştirince pano yenilenir; taşıma sürerken kuyruk bitince', async () => {
+    await create();
+
+    component.onTaskChanged();
+    expect(tasks.board).toHaveBeenCalledTimes(2);
+
+    component.drop(dropEvent(component, 'TODO', 0, 'DONE', 0));
+    component.onTaskChanged();
+    expect(tasks.board).toHaveBeenCalledTimes(2);
+    moveResponses[0].next(task(1, 'DONE', 0));
+    moveResponses[0].complete();
+    expect(tasks.board).toHaveBeenCalledTimes(3);
+  });
+
+  it('arşivde "Yeni görev" yok', async () => {
+    projects.get.and.returnValue(of({ ...PROJECT, status: 'ARCHIVED' }));
+    await create();
+
+    expect(el().textContent).not.toContain('Yeni görev');
   });
 });

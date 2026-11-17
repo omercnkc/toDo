@@ -76,4 +76,13 @@ describe('ProjectService', () => {
     service.cancelInvitation(7, 50).subscribe();
     expect(http.expectOne('/api/projects/7/invitations/50').request.method).toBe('DELETE');
   });
+
+  it('kalıcı silme: DELETE ?permanent=true', () => {
+    service.deletePermanently(7).subscribe();
+
+    const req = http.expectOne((r) => r.url === '/api/projects/7');
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.params.get('permanent')).toBe('true');
+    req.flush(null);
+  });
 });

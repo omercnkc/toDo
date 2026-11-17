@@ -82,6 +82,12 @@ Uygulama notları (4-F):
 - Responsive: masaüstünde 3 eşit kolon; dar ekranda kolonlar %85 genişlikte yatay kayar (`scroll-snap-type: x proximity` — `mandatory`, CDK'nın sürüklerken yaptığı otomatik kaydırmayı geri yapıştırabilir), `cdkScrollable` ile sürüklerken pano otomatik kayar. Dokunmatikte sürükleme 250 ms basılı tutunca başlar (kaydırmayla karışmasın).
 - Erişilebilirlik notu: sürükle-bırak fare/dokunmatik içindir; klavyeyle durum değiştirme 4-G'deki görev modalında.
 
+Uygulama notları (4-G):
+- Görev modalı (`TaskModalComponent`): Bootstrap modal görünümü Angular ile çizilir (Bootstrap JS/ng-bootstrap yok); odak `cdkTrapFocus` ile modalda, açılışta başlık alanında, kapanınca açan karta döner; Esc ve arka plana tıklama kapatır; `body.modal-open` sayfa kaydırmasını kilitler; mobilde tam ekran. Oluşturma (TODO sonuna), görüntüleme/düzenleme, silme (onaylı; yalnızca `canDelete`). Düzenlemede **durum** seçilebilir: sürükle-bırakın klavye karşılığı (önce PUT, durum değiştiyse `PATCH /status` → yeni kolonun sonu). Atanan seçenekleri proje üyeleri; artık üye olmayan atanan "Kullanıcı #id (üye değil)" olarak korunur. Arşivde salt okunur. 4xx alan hataları alanların altında; 404/409'da pano da yenilenir.
+- Kartlar odaklanabilir (`tabindex`, `role=button`); tıklama veya Enter modalı açar. Sürüklemenin sonunda tarayıcının ürettiği tıklama `cdkDragEnded` + bir tur gecikmeyle yok sayılır.
+- Filtre çubuğu (istemci tarafı, `board-filter.ts`): arama (başlık+açıklama, Türkçe harf duyarsız), atanan (herkes / bana atanan / atanmamış / kişi), öncelik; kolon rozeti filtreliyken "görünen / toplam". Filtre açıkken sürükleme **yalnızca kolon değiştirir** (görev hedefin sonuna; kolon içi bırakma yok sayılır), görevin gerçek yeri tüm board'da aranır. Sunucu tarafı liste/arama/sayfalama Faz 5'te.
+- Proje detayında yalnızca OWNER/ADMIN'e "Projeyi kalıcı sil" bölümü: onay için proje adı yazılır (`prompt`), başarıda `/projects`'e dönülür; görevler sunucuda outbox ile temizlenir. `notBlank` doğrulayıcısı ortak `validators.ts`'e taşındı.
+
 ## Reaktif Yapı (RxJS)
 - Servis tabanlı state: `BehaviorSubject` + `asObservable()`; ağır kütüphane (NgRx) ilk sürümde yok.
 - Arama kutusu: `valueChanges.pipe(debounceTime(300), distinctUntilChanged(), switchMap(...))`.
@@ -100,7 +106,7 @@ Uygulama notları (4-F):
 - `drop` olayında **iyimser güncelleme**: UI hemen güncellenir, `PATCH /tasks/{id}/move` çağrılır, hata olursa eski duruma geri alınır + toast.
 - Kolon başlıkları: Yapılacak / Devam Ediyor / Tamamlandı; kolonda görev sayısı rozeti.
 - Kart: başlık, öncelik rozeti, atanan avatarı, bitiş tarihi (gecikmişse kırmızı).
-- Üstte arama ve filtre çubuğu (atanan, öncelik); filtre aktifken sürükle-bırak yine çalışır ancak sıra bilgisi yalnızca filtresiz görünümde güncellenir (aksi halde hedef index belirsiz kalır) — veya filtre aktifken sürükleme sadece kolon değiştirir.
+- Üstte arama ve filtre çubuğu (atanan, öncelik). **Karar (4-G):** filtre aktifken sürükleme yalnızca kolon değiştirir (görev hedef kolonun sonuna eklenir); kolon içi sıralama filtresiz görünümde yapılır (filtreli görünümde hedef index belirsiz).
 
 ## Dashboard
 Üst kartlar (proje sayısı, toplam/açık/geciken görev), görev durum dağılımı (doughnut), proje ilerleme çubukları, yaklaşan bitiş tarihleri listesi, bana atanan görevler. `ng2-charts` + Chart.js.

@@ -10,6 +10,7 @@ import { Project, PROJECT_DESCRIPTION_MAX, PROJECT_NAME_MAX } from '../../../cor
 import { ProjectService } from '../../../core/services/project.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { applyServerErrors } from '../../../shared/forms/server-errors';
+import { notBlank } from '../../../shared/forms/validators';
 
 type ProjectField = 'name' | 'description';
 
@@ -164,10 +165,4 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
     const apiError = extractApiError(error);
     this.formError = apiError ? applyServerErrors(this.form, apiError) : 'Kaydedilemedi. Lütfen tekrar deneyin.';
   }
-}
-
-/** Yalnızca boşluktan oluşan ad: backend `@NotBlank` ile aynı kural. */
-function notBlank(control: AbstractControl): { required: true } | null {
-  const value: unknown = control.value;
-  return typeof value === 'string' && value.length > 0 && value.trim() === '' ? { required: true } : null;
 }

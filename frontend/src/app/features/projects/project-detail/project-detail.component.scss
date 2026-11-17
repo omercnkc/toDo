@@ -4,3 +4,8 @@
   overflow-wrap: anywhere;
   max-width: 60rem;
 }
+
+// Bootstrap 5.2'de border-danger-subtle yok
+.danger-zone {
+  border-color: #f1aeb5;
+}

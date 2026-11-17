@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of, throwError } from 'rxjs';
 
@@ -63,7 +63,8 @@ describe('ProjectDetailComponent', () => {
 
   beforeEach(() => {
     projects = jasmine.createSpyObj<ProjectService>('ProjectService',
-      ['get', 'members', 'invitations', 'archive', 'restore', 'removeMember', 'invite', 'cancelInvitation']);
+      ['get', 'members', 'invitations', 'archive', 'restore', 'removeMember', 'invite', 'cancelInvitation',
+        'deletePermanently']);
     toast = jasmine.createSpyObj<ToastService>('ToastService', ['success', 'error']);
     projects.get.and.returnValue(of(PROJECT));
     projects.members.and.returnValue(of(MEMBERS));
@@ -166,5 +167,41 @@ describe('ProjectDetailComponent', () => {
 
     expect(projects.cancelInvitation).toHaveBeenCalledWith(7, 50);
     expect(toast.success).toHaveBeenCalledWith('Davet geri çekildi.');
+  });
+
+  // ---------- kalıcı silme ----------
+
+  it('kalıcı silme: proje adı yazılınca siler ve listeye döner', async () => {
+    await create();
+    projects.deletePermanently.and.returnValue(of(undefined));
+    const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+    spyOn(window, 'prompt').and.returnValue(' Web Sitesi ');
+
+    Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent?.trim() === 'Kalıcı sil')!
+      .click();
+
+    expect(projects.deletePermanently).toHaveBeenCalledOnceWith(7);
+    expect(toast.success).toHaveBeenCalledWith('"Web Sitesi" kalıcı olarak silindi.');
+    expect(navigate).toHaveBeenCalledWith('/projects');
+  });
+
+  it('kalıcı silme: ad eşleşmezse veya vazgeçilirse silinmez', async () => {
+    await create();
+    const prompt = spyOn(window, 'prompt').and.returnValues('web sitesi', null);
+
+    component.deletePermanently();
+    component.deletePermanently();
+
+    expect(prompt).toHaveBeenCalledTimes(2);
+    expect(projects.deletePermanently).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledOnceWith('Proje adı eşleşmedi; proje silinmedi.');
+  });
+
+  it('kalıcı silme bölümü yalnızca yönetebilene görünür', async () => {
+    projects.get.and.returnValue(of({ ...PROJECT, myRole: 'MEMBER', canManage: false }));
+    await create();
+
+    expect(el().textContent).not.toContain('Projeyi kalıcı sil');
+    expect(el().textContent).toContain('Kanban panosu');
   });
 });

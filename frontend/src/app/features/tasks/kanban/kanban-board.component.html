@@ -27,7 +27,7 @@
   </div>
 </div>
 
-<ng-container *ngIf="project && board && !error">
+<ng-container *ngIf="project && board && view && !error">
   <header class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
     <div class="min-w-0">
       <h1 class="h3 mb-1 text-break">{{ project.name }}</h1>
@@ -38,10 +38,52 @@
         </span>
       </div>
     </div>
+    <button *ngIf="!readOnly" type="button" class="btn btn-primary" (click)="openNew()">+ Yeni görev</button>
   </header>
 
   <div *ngIf="readOnly" class="alert alert-secondary" role="status">
     Bu proje arşivde: görevler görüntülenebilir ama taşınamaz veya değiştirilemez.
+  </div>
+
+  <!-- Filtre çubuğu (istemci tarafı) -->
+  <form class="kanban-filters row g-2 align-items-end mb-3" role="search" aria-label="Görevleri filtrele" (submit)="$event.preventDefault()">
+    <div class="col-12 col-md-5">
+      <label for="kanban-search" class="form-label small mb-1">Ara</label>
+      <input
+        id="kanban-search"
+        type="search"
+        class="form-control"
+        placeholder="Başlık veya açıklamada ara"
+        autocomplete="off"
+        [value]="filter.search"
+        (input)="setFilter({ search: $any($event.target).value })"
+      />
+    </div>
+    <div class="col-6 col-md-3">
+      <label for="kanban-assignee" class="form-label small mb-1">Atanan</label>
+      <select id="kanban-assignee" class="form-select" [value]="filter.assignee" (change)="setFilter({ assignee: $any($event.target).value })">
+        <option value="">Herkes</option>
+        <option value="me">Bana atanan</option>
+        <option value="none">Atanmamış</option>
+        <option *ngFor="let member of members" [value]="member.userId">{{ member.fullName || 'Kullanıcı #' + member.userId }}</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label for="kanban-priority" class="form-label small mb-1">Öncelik</label>
+      <select id="kanban-priority" class="form-select" [value]="filter.priority" (change)="setFilter({ priority: $any($event.target).value })">
+        <option value="">Tümü</option>
+        <option *ngFor="let priority of priorities" [value]="priority">{{ priorityLabels[priority] }}</option>
+      </select>
+    </div>
+    <div class="col-12 col-md-2">
+      <button type="button" class="btn btn-outline-secondary w-100" [disabled]="!filterActive" (click)="clearFilter()">
+        Temizle
+      </button>
+    </div>
+  </form>
+
+  <div *ngIf="filterActive && !readOnly" class="small text-muted mb-2" role="status">
+    Filtre açık: sürükleme yalnızca kolon değiştirir (görev hedef kolonun sonuna eklenir). Sıralamak için filtreyi temizle.
   </div>
 
   <!-- Masaüstünde 3 kolon yan yana; dar ekranda yatay kaydırma (kolon başına bir sayfa) -->
@@ -53,8 +95,11 @@
     >
       <h2 class="kanban-column-title h6" [id]="dropListId(status) + '-title'">
         {{ statusLabels[status] }}
-        <span class="badge rounded-pill bg-light text-dark border ms-1" [attr.aria-label]="board[status].length + ' görev'">
-          {{ board[status].length }}
+        <span
+          class="badge rounded-pill bg-light text-dark border ms-1"
+          [attr.aria-label]="filterActive ? view[status].length + ' / ' + board[status].length + ' görev' : board[status].length + ' görev'"
+        >
+          {{ filterActive ? view[status].length + ' / ' + board[status].length : board[status].length }}
         </span>
       </h2>
 
@@ -67,13 +112,20 @@
         (cdkDropListDropped)="drop($event)"
       >
         <article
-          *ngFor="let task of board[status]; trackBy: trackTask"
+          *ngFor="let task of view[status]; trackBy: trackTask"
           class="kanban-card card"
           cdkDrag
           [cdkDragData]="task"
           [cdkDragDisabled]="readOnly"
           [cdkDragStartDelay]="{ touch: 250, mouse: 0 }"
           [attr.data-task-id]="task.id"
+          tabindex="0"
+          role="button"
+          [attr.aria-label]="task.title + ' — ayrıntılar'"
+          (cdkDragStarted)="onDragStarted()"
+          (cdkDragEnded)="onDragEnded()"
+          (click)="open(task)"
+          (keydown.enter)="open(task)"
         >
           <div class="card-body p-2">
             <div class="d-flex align-items-start justify-content-between gap-2">
@@ -102,10 +154,20 @@
           <div *cdkDragPlaceholder class="kanban-placeholder"></div>
         </article>
 
-        <p *ngIf="board[status].length === 0" class="kanban-empty text-muted small text-center">
-          {{ readOnly ? 'Görev yok' : 'Görev yok. Buraya sürükleyebilirsin.' }}
+        <p *ngIf="view[status].length === 0" class="kanban-empty text-muted small text-center">
+          {{ filterActive && board[status].length > 0 ? 'Filtreye uyan görev yok' : readOnly ? 'Görev yok' : 'Görev yok. Buraya sürükleyebilirsin.' }}
         </p>
       </div>
     </section>
   </div>
 </ng-container>
+
+<app-task-modal
+  *ngIf="modalTask !== undefined"
+  [projectId]="projectId"
+  [task]="modalTask"
+  [members]="members"
+  [readOnly]="readOnly"
+  (changed)="onTaskChanged()"
+  (closed)="closeModal()"
+></app-task-modal>

@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { forkJoin, Observable, of, Subject } from 'rxjs';
 import { catchError, concatMap, map, switchMap, takeUntil } from 'rxjs/operators';
 
+import { AuthService } from '../../../core/auth/auth.service';
 import { extractApiError } from '../../../core/models/api-error.model';
 import { displayName, Project, ProjectMember } from '../../../core/models/project.model';
 import {
@@ -15,11 +16,13 @@ import {
   TASK_PRIORITY_LABELS,
   TASK_STATUS_LABELS,
   TASK_STATUSES,
+  TASK_PRIORITIES,
   TaskStatus,
 } from '../../../core/models/task.model';
 import { ProjectService } from '../../../core/services/project.service';
 import { TaskService } from '../../../core/services/task.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { BoardFilter, EMPTY_FILTER, filterBoard, isFilterActive } from './board-filter';
 import { cloneBoard, findSlot, moveTask } from './board-moves';
 
 export type BoardError = 'notFound' | 'forbidden' | 'failed';
@@ -44,6 +47,12 @@ type MoveResult = { command: MoveCommand; task: Task } | { command: MoveCommand;
  * - Taşımalar sürerken gelen yeniden yükleme yanıtı yok sayılır (iyimser durumu ezmesin), kuyruk boşalınca
  *   yeniden yüklenir.
  * Arşivlenmiş projede sürükleme kapalıdır.
+ *
+ * Filtre (arama, atanan, öncelik) istemci tarafındadır. Filtre açıkken görünen sıra tüm kolonun sırası
+ * olmadığından hedef index belirsizdir: sürükleme yalnızca **kolon değiştirir** (görev hedef kolonun sonuna
+ * eklenir), kolon içi sıralama filtresiz görünümde yapılır (docs/08 "Kanban").
+ *
+ * Karta tıklayınca (veya Enter) görev modalı açılır; "Yeni görev" boş modal açar.
  */
 @Component({
   selector: 'app-kanban-board',
@@ -54,17 +63,28 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   readonly statuses = TASK_STATUSES;
   readonly statusLabels = TASK_STATUS_LABELS;
   readonly priorityLabels = TASK_PRIORITY_LABELS;
+  readonly priorities = TASK_PRIORITIES;
   readonly today = localToday();
+  readonly currentUserId = this.auth.currentUser?.id ?? null;
 
   projectId = 0;
   project: Project | null = null;
-  board: Board | null = null;
+  members: ProjectMember[] = [];
+  /** Kartlarda gösterilen (filtrelenmiş) board. */
+  view: Board | null = null;
+  filter: BoardFilter = { ...EMPTY_FILTER };
   loading = true;
   error: BoardError | null = null;
   /** Gönderilmiş ama yanıtı gelmemiş taşıma sayısı. */
   pendingMoves = 0;
 
+  /** Modal: `undefined` kapalı, `null` yeni görev, görev → düzenleme. */
+  modalTask: Task | null | undefined = undefined;
+
+  private _board: Board | null = null;
   private membersById = new Map<number, ProjectMember>();
+  /** Sürüklemenin sonunda tarayıcının ürettiği tıklama modalı açmasın. */
+  private dragging = false;
   private reloadWhenIdle = false;
   private readonly moves$ = new Subject<MoveCommand>();
   private readonly destroy$ = new Subject<void>();
@@ -74,7 +94,18 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
     private readonly projects: ProjectService,
     private readonly toast: ToastService,
     private readonly route: ActivatedRoute,
+    private readonly auth: AuthService,
   ) {}
+
+  /** Tüm görevler (sunucudaki sıra); her atamada görünür board yeniden hesaplanır. */
+  get board(): Board | null {
+    return this._board;
+  }
+
+  set board(board: Board | null) {
+    this._board = board;
+    this.refreshView();
+  }
 
   ngOnInit(): void {
     // :id bir üst route'ta (projects/:id → board)
@@ -119,16 +150,43 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
     return `kanban-${status}`;
   }
 
-  /** CDK `drop`: `container.data` kolonun durumu. */
-  drop(event: CdkDragDrop<TaskStatus>): void {
+  get filterActive(): boolean {
+    return isFilterActive(this.filter);
+  }
+
+  setFilter(change: Partial<BoardFilter>): void {
+    this.filter = { ...this.filter, ...change };
+    this.refreshView();
+  }
+
+  clearFilter(): void {
+    this.filter = { ...EMPTY_FILTER };
+    this.refreshView();
+  }
+
+  /**
+   * CDK `drop`: `container.data` kolonun durumu, `item.data` görev. Görevin gerçek yeri tüm board'da aranır
+   * (filtreli görünümdeki index tüm kolonun index'i değildir).
+   */
+  drop(event: CdkDragDrop<TaskStatus, TaskStatus, Task>): void {
     if (!this.board || this.readOnly) {
       return;
     }
-    const from = { status: event.previousContainer.data, index: event.previousIndex };
-    const to = { status: event.container.data, index: event.currentIndex };
+    const from = findSlot(this.board, event.item.data.id);
+    const targetStatus = event.container.data;
+    if (!from) {
+      return;
+    }
+    let to = { status: targetStatus, index: event.currentIndex };
+    if (this.filterActive) {
+      if (from.status === targetStatus) {
+        return; // filtreli görünümde kolon içi sıralama yok
+      }
+      to = { status: targetStatus, index: this.board[targetStatus].length };
+    }
     const task = this.board[from.status][from.index];
     const next = moveTask(this.board, from, to);
-    if (!task || !next) {
+    if (!next) {
       return;
     }
     const snapshot = this.board;
@@ -150,6 +208,40 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
     return isOverdue(task, this.today);
   }
 
+  // ---------- modal ----------
+
+  openNew(): void {
+    this.modalTask = null;
+  }
+
+  open(task: Task): void {
+    if (!this.dragging) {
+      this.modalTask = task;
+    }
+  }
+
+  closeModal(): void {
+    this.modalTask = undefined;
+  }
+
+  /** Modal görevi oluşturdu/değiştirdi/sildi. */
+  onTaskChanged(): void {
+    if (this.pendingMoves === 0) {
+      this.reloadBoard();
+    } else {
+      this.reloadWhenIdle = true;
+    }
+  }
+
+  onDragStarted(): void {
+    this.dragging = true;
+  }
+
+  /** Bırakmanın ardından gelen tıklama olayı geçtikten sonra. */
+  onDragEnded(): void {
+    setTimeout(() => (this.dragging = false));
+  }
+
   retry(): void {
     this.loadAll(this.projectId).pipe(takeUntil(this.destroy$)).subscribe();
   }
@@ -161,6 +253,10 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  private refreshView(): void {
+    this.view = this._board ? filterBoard(this._board, this.filter, this.currentUserId) : null;
   }
 
   private onMoveResult(result: MoveResult): void {
@@ -222,6 +318,7 @@ export class KanbanBoardComponent implements OnInit, OnDestroy {
       map(({ project, board, members }) => {
         this.project = project;
         this.board = cloneBoard(board);
+        this.members = members;
         this.membersById = new Map(members.map((member) => [member.userId, member]));
         this.loading = false;
         return null;

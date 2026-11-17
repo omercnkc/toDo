@@ -55,6 +55,12 @@ export class ProjectService {
     return this.http.delete<void>(`${this.projectsUrl}/${id}`);
   }
 
+  /** Kalıcı siler (204, geri alınamaz). Görevler sunucuda outbox ile asenkron temizlenir. */
+  deletePermanently(id: number): Observable<void> {
+    const params = new HttpParams().set('permanent', true);
+    return this.http.delete<void>(`${this.projectsUrl}/${id}`, { params });
+  }
+
   /** Arşivden çıkarır. PUT tam güncelleme olduğu için ad ve açıklama da aynen gönderilir. */
   restore(project: Pick<Project, 'id' | 'name' | 'description'>): Observable<Project> {
     return this.update(project.id, { name: project.name, description: project.description, status: 'ACTIVE' });
