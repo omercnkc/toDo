@@ -134,6 +134,12 @@ Uygulama notları (6-D):
 - Proje ilerlemesi: sunucu sırası (aktifler önce, Türkçe ada göre), en fazla 8 proje + "Tüm projeler (+N)" (`/projects?status=ALL`); ad görev listesine bağlantı; çubuk `role="progressbar"`; rol, "N görev"/"Görev yok", geciken, arşiv rozeti.
 - Durumlar: ilk kullanım (hiç proje yok → yeni proje / davetlerim), yükleniyor (yeniden yüklemede eski sayılar soluk), 503 → "Özet şu an alınamıyor" + tekrar dene, 403. Bekleyen davet uyarısı korunur. Mobilde kartlar 2×2, grafik ve liste alt alta.
 
+Uygulama notları (6-E) – kişisel listeler:
+- "Bana atanan açık görevler" (bitiş tarihi en yakın önce, tarihsizler sonda) ve "Yaklaşan bitiş tarihleri" (bugün dahil 7 gün, açık görevler; gecikmişler "Geciken" kartında). En fazla 5 görev, fazlası için "5 / N". Projeler arası `GET /api/tasks` (5-B) ile, özetle paralel; yalnızca "Benim projelerim" kapsamında (listeler kişisel).
+- Liste tanımı ve görevden açılan bağlantı aynı kaynaktan (`dashboard-lists.ts`): görev, projesinin görev listesini panelde görülen filtre ve sırayla açar (`?assignee=me&status=TODO,IN_PROGRESS&sort=dueDate,asc` / `?status=…&dueFrom=…&dueTo=…&sort=dueDate,asc`) — panelde görülen görevler listenin başında. Proje satırındaki "N geciken" → `?overdue=1&sort=dueDate,asc`.
+- Liste hatası yalnızca o kartı etkiler ("Liste yüklenemedi" + tekrar dene). Listeler önbelleğe alınmaz (anlık); özet sayıları sunucuda 30 sn önbellekte olduğundan kısa süre ikisi farklı olabilir.
+- Bağlantı parametreleri bir kez hesaplanır (şablonda her değişiklik algılamada yeni `queryParams` nesnesi üretilmesin).
+
 ## Responsive
 - Bootstrap grid (`col-12 col-md-6 col-lg-4`), navbar mobilde offcanvas/collapse.
 - Kanban: masaüstünde 3 kolon yan yana; mobilde yatay kaydırma (scroll-snap) ya da kolonlar alt alta. CDK drag-drop dokunmatikte çalışır.

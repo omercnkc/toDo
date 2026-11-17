@@ -7,8 +7,10 @@ import { catchError, distinctUntilChanged, map, switchMap, takeUntil, tap } from
 
 import { AuthService } from '../../core/auth/auth.service';
 import { DashboardScope, DashboardSummary, ProjectProgress } from '../../core/models/dashboard.model';
-import { TASK_STATUS_LABELS, TaskStatus } from '../../core/models/task.model';
+import { isOverdue, localToday, Task, TASK_STATUS_LABELS, TaskStatus } from '../../core/models/task.model';
 import { DashboardService } from '../../core/services/dashboard.service';
+import { TaskService } from '../../core/services/task.service';
+import { assignedToMeList, DashboardList, UPCOMING_DAYS, upcomingList } from './dashboard-lists';
 import { InvitationService } from '../../core/services/invitation.service';
 
 export type DashboardError = 'unavailable' | 'forbidden' | 'failed';
@@ -39,6 +41,9 @@ interface StatusSlice {
  * - Sayılar sunucuda 30 sn önbelleklenir; "Güncellendi" saati `generatedAt`'tir.
  * - Grafiğin metin karşılığı yanındaki açıklama listesi (sayı + yüzde); tuval ekran okuyucuya tek cümleyle tanıtılır.
  * - Bekleyen davet uyarısı korunur (sayı navbar'daki `InvitationService`'ten, ayrı istek yok).
+ * - "Benim projelerim"de iki liste (6-E): bana atanan açık görevler ve önümüzdeki 7 günde bitecekler; projeler arası
+ *   `GET /tasks` ucuyla, özetle paralel. Liste hatası yalnızca o kartı etkiler. Görev, projesinin görev listesini
+ *   panelde görülen filtreyle açar. Tüm sistem kapsamında gösterilmez (listeler kişisel).
  */
 @Component({
   selector: 'app-dashboard',
@@ -55,6 +60,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
   summary: DashboardSummary | null = null;
   loading = true;
   error: DashboardError | null = null;
+
+  readonly today = localToday();
+  /** Panel listeleri; `null` yüklenmedi/yükleniyor. */
+  readonly lists: Record<ListKey, ListState> = { assigned: emptyList(), upcoming: emptyList() };
+  readonly listViews: ListView[] = [
+    { key: 'assigned', title: 'Bana atanan açık görevler', empty: 'Sana atanmış açık görev yok.', state: this.lists.assigned },
+    {
+      key: 'upcoming',
+      title: 'Yaklaşan bitiş tarihleri',
+      hint: `Önümüzdeki ${UPCOMING_DAYS} gün, gecikmişler hariç`,
+      empty: 'Önümüzdeki günlerde bitecek açık görev yok.',
+      state: this.lists.upcoming,
+    },
+  ];
+  readonly statusLabels = TASK_STATUS_LABELS;
+  /** Bir kez hesaplanır: şablondaki bağlantıların `queryParams`'ı her turda yeni nesne olmasın. */
+  private readonly listDefs: Record<ListKey, DashboardList> = {
+    assigned: assignedToMeList(this.auth.currentUser?.id ?? 0),
+    upcoming: upcomingList(this.today),
+  };
 
   slices: StatusSlice[] = [];
   chartData: ChartConfiguration<'doughnut'>['data'] = { labels: [], datasets: [] };
@@ -78,6 +103,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private readonly auth: AuthService,
     private readonly invitations: InvitationService,
     private readonly dashboard: DashboardService,
+    private readonly tasks: TaskService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
   ) {}
@@ -89,7 +115,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     );
     merge(scope$, this.reload$.pipe(map(() => this.scope)))
       .pipe(
-        switchMap((scope) => this.load(scope)),
+        switchMap((scope) => merge(this.load(scope), scope === 'mine' ? this.loadLists() : of(null))),
         takeUntil(this.destroy$),
       )
       .subscribe();
@@ -130,9 +156,58 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return project.id;
   }
 
+  trackTask(_index: number, task: Task): number {
+    return task.id;
+  }
+
+  projectName(task: Task): string {
+    return this.summary?.projects.find((p) => p.id === task.projectId)?.name ?? `Proje #${task.projectId}`;
+  }
+
+  overdue(task: Task): boolean {
+    return isOverdue(task, this.today);
+  }
+
+  /** Görevin projesindeki görev listesi, panel listesiyle aynı filtreyle. */
+  listLink(key: ListKey): DashboardList['link'] {
+    return this.listDefs[key].link;
+  }
+
+
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /** İki liste paralel; her biri kendi hatasını tutar. Kimlik bilinmiyorsa "bana atanan" boş (başkalarını değil). */
+  private loadLists(): Observable<unknown> {
+    const defs = this.listDefs;
+    return merge(
+      ...(Object.keys(defs) as ListKey[]).map((key) => {
+        const state = this.lists[key];
+        state.loading = true;
+        state.failed = false;
+        if (key === 'assigned' && !this.auth.currentUser) {
+          state.loading = false;
+          state.tasks = [];
+          state.total = 0;
+          return of(null);
+        }
+        return this.tasks.list(defs[key].api, true).pipe(
+          tap((page) => {
+            state.tasks = page.content;
+            state.total = page.totalElements;
+            state.loading = false;
+          }),
+          catchError(() => {
+            state.loading = false;
+            state.failed = true;
+            return of(null);
+          }),
+        );
+      }),
+    );
   }
 
   private load(scope: DashboardScope): Observable<unknown> {
@@ -180,6 +255,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
       ],
     };
   }
+}
+
+type ListKey = 'assigned' | 'upcoming';
+
+interface ListState {
+  tasks: Task[] | null;
+  total: number;
+  loading: boolean;
+  failed: boolean;
+}
+
+interface ListView {
+  key: ListKey;
+  title: string;
+  hint?: string;
+  empty: string;
+  state: ListState;
+}
+
+function emptyList(): ListState {
+  return { tasks: null, total: 0, loading: false, failed: false };
 }
 
 function prefersReducedMotion(): boolean {

@@ -76,6 +76,19 @@ a.stat-card:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+.task-mini-list li + li {
+  border-top: 1px solid var(--bs-gray-200);
+}
+
+.task-mini-list a:hover .fw-medium,
+.task-mini-list a:focus-visible .fw-medium {
+  text-decoration: underline;
+}
+
+.fw-medium {
+  font-weight: 500;
+}
+
 .project-progress {
   .progress {
     height: 0.5rem;

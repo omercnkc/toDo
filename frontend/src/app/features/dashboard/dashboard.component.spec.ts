@@ -7,10 +7,25 @@ import { BehaviorSubject, of, throwError } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { DashboardSummary, ProjectProgress } from '../../core/models/dashboard.model';
+import { Page } from '../../core/models/page.model';
+import { localToday, Task, TaskListParams } from '../../core/models/task.model';
 import { DashboardService } from '../../core/services/dashboard.service';
+import { TaskService } from '../../core/services/task.service';
 import { InvitationService } from '../../core/services/invitation.service';
 import { SharedModule } from '../../shared/shared.module';
+import { addDays } from './dashboard-lists';
 import { DashboardComponent } from './dashboard.component';
+
+function task(id: number, extra: Partial<Task> = {}): Task {
+  return {
+    id, projectId: 7, title: `Görev ${id}`, description: null, status: 'TODO', priority: 'MEDIUM', position: 0,
+    assigneeId: 1, reporterId: 1, dueDate: null, canDelete: true, createdAt: '', updatedAt: '', ...extra,
+  };
+}
+
+function page(content: Task[], totalElements = content.length): Page<Task> {
+  return { content, page: 0, size: 5, totalElements, totalPages: 1 };
+}
 
 function project(id: number, extra: Partial<ProjectProgress> = {}): ProjectProgress {
   return {
@@ -42,6 +57,10 @@ describe('DashboardComponent', () => {
   let queryParams: BehaviorSubject<ParamMap>;
   let role: 'USER' | 'ADMIN';
   let pending: BehaviorSubject<number>;
+  let tasks: jasmine.SpyObj<TaskService>;
+  /** Liste isteklerinin yanıtı: bana atanan mı (assigneeId var) yaklaşan mı. */
+  let assignedPage: Page<Task>;
+  let upcomingPage: Page<Task>;
 
   async function create(params: Record<string, string> = {}): Promise<void> {
     queryParams = new BehaviorSubject(convertToParamMap(params));
@@ -51,6 +70,7 @@ describe('DashboardComponent', () => {
       declarations: [DashboardComponent],
       providers: [
         { provide: DashboardService, useValue: dashboard },
+        { provide: TaskService, useValue: tasks },
         { provide: AuthService, useValue: { currentUser: user, currentUser$: of(user) } },
         { provide: InvitationService, useValue: { pendingCount$: pending } },
         { provide: ActivatedRoute, useValue: { queryParamMap: queryParams } },
@@ -75,7 +95,16 @@ describe('DashboardComponent', () => {
     dashboard.summary.and.returnValue(of(summary()));
     role = 'USER';
     pending = new BehaviorSubject(0);
+    tasks = jasmine.createSpyObj<TaskService>('TaskService', ['list']);
+    assignedPage = page([
+      task(1, { title: 'Giriş ekranı', dueDate: '2000-01-01', status: 'IN_PROGRESS' }),
+      task(2, { projectId: 99, title: 'Bilinmeyen projede' }),
+    ], 6);
+    upcomingPage = page([]);
+    tasks.list.and.callFake((params: TaskListParams) => of(params.assigneeId !== undefined ? assignedPage : upcomingPage));
   });
+
+  const listCard = (key: string) => el().querySelector<HTMLElement>(`[data-list="${key}"]`)!;
 
   it('özet kartları: aktif proje (+arşiv), açık/toplam, geciken, bana atanan', async () => {
     await create();
@@ -200,5 +229,79 @@ describe('DashboardComponent', () => {
     pending.next(2);
     await create();
     expect(el().textContent).toContain('2 bekleyen proje davetin var');
+  });
+
+  // ---------- 6-E: kişisel listeler ----------
+
+  it('listeler özetle birlikte doğru parametrelerle istenir', async () => {
+    await create();
+
+    const calls = tasks.list.calls.allArgs();
+    expect(calls.length).toBe(2);
+    const assigned = calls.find(([p]) => p.assigneeId !== undefined)!;
+    const upcoming = calls.find(([p]) => p.assigneeId === undefined)!;
+    expect(assigned[0]).toEqual({ assigneeId: 1, status: ['TODO', 'IN_PROGRESS'], sort: [{ field: 'dueDate', direction: 'asc' }], size: 5 });
+    expect(assigned[1]).withContext('hata kartta gösterilir, genel bildirim yok').toBeTrue();
+    expect(upcoming[0].dueFrom).toBe(localToday());
+    expect(upcoming[0].dueTo).toBe(addDays(localToday(), 6));
+    expect(upcoming[0].projectId).withContext('projeler arası').toBeUndefined();
+  });
+
+  it('bana atanan: başlık, proje adı, durum, gecikme; görev projesinin listesini aynı filtreyle açar', async () => {
+    await create();
+    const card = listCard('assigned');
+
+    const items = card.querySelectorAll<HTMLAnchorElement>('li a');
+    expect(items.length).toBe(2);
+    expect(items[0].textContent).toContain('Giriş ekranı');
+    expect(items[0].textContent).toContain('Web Sitesi');
+    expect(items[0].textContent).toContain('Devam Ediyor');
+    expect(items[0].querySelector('.text-danger')!.textContent).toContain('gecikti');
+    expect(items[0].getAttribute('href')).toBe('/projects/7/tasks?assignee=me&status=TODO,IN_PROGRESS&sort=dueDate,asc');
+    expect(items[1].textContent).toContain('Proje #99');
+    expect(items[1].textContent).toContain('Tarih yok');
+    expect(card.querySelector('.list-count')!.textContent!.trim()).toBe('2 / 6');
+  });
+
+  it('boş liste açıklaması; yaklaşan bağlantısı tarih aralığıyla', async () => {
+    upcomingPage = page([task(5, { dueDate: addDays(localToday(), 2) })]);
+    assignedPage = page([]);
+    await create();
+
+    expect(listCard('assigned').textContent).toContain('Sana atanmış açık görev yok.');
+    const link = listCard('upcoming').querySelector('li a')!.getAttribute('href')!;
+    expect(link).toContain(`dueFrom=${localToday()}`);
+    expect(link).toContain(`dueTo=${addDays(localToday(), 6)}`);
+    expect(listCard('upcoming').textContent).toContain('Önümüzdeki 7 gün');
+  });
+
+  it('liste hatası yalnızca o kartı etkiler; tekrar dene hepsini yeniler', async () => {
+    tasks.list.and.callFake((params: TaskListParams) =>
+      params.assigneeId !== undefined ? throwError(() => new HttpErrorResponse({ status: 503 })) : of(upcomingPage),
+    );
+    await create();
+
+    expect(listCard('assigned').textContent).toContain('Liste yüklenemedi');
+    expect(listCard('upcoming').textContent).not.toContain('Liste yüklenemedi');
+    expect(stat('open')).withContext('özet etkilenmez').toBe('5');
+
+    tasks.list.and.callFake((params: TaskListParams) => of(params.assigneeId !== undefined ? assignedPage : upcomingPage));
+    listCard('assigned').querySelector<HTMLButtonElement>('button')!.click();
+    expect(listCard('assigned').querySelectorAll('li').length).toBe(2);
+  });
+
+  it('tüm sistem kapsamında kişisel listeler yok', async () => {
+    role = 'ADMIN';
+    await create({ scope: 'all' });
+
+    expect(tasks.list).not.toHaveBeenCalled();
+    expect(el().querySelector('[data-list]')).toBeNull();
+  });
+
+  it('proje satırındaki geciken sayısı gecikmiş filtresiyle listeye bağlanır', async () => {
+    await create();
+    const overdue = el().querySelector<HTMLAnchorElement>('.project-progress li a.text-danger')!;
+    expect(overdue.textContent!.trim()).toBe('2 geciken');
+    expect(overdue.getAttribute('href')).toBe('/projects/7/tasks?overdue=1&sort=dueDate,asc');
   });
 });

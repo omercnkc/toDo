@@ -178,8 +178,62 @@
                   <span *ngIf="project.status === 'ARCHIVED'" class="badge bg-secondary">Arşivde</span>
                   <span *ngIf="roleLabel(project) as role" class="text-muted">{{ role }}</span>
                   <span class="text-muted">{{ project.total ? project.total + ' görev' : 'Görev yok' }}</span>
-                  <span *ngIf="project.overdue > 0" class="text-danger">{{ project.overdue }} geciken</span>
+                  <a
+                    *ngIf="project.overdue > 0"
+                    [routerLink]="['/projects', project.id, 'tasks']"
+                    [queryParams]="{ overdue: 1, sort: 'dueDate,asc' }"
+                    class="text-danger"
+                    >{{ project.overdue }} geciken</a
+                  >
                 </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Kişisel listeler (yalnızca "Benim projelerim") -->
+    <div *ngIf="scope === 'mine'" class="row g-3 mt-0" [class.is-loading]="loading">
+      <section *ngFor="let list of listViews" class="col-12 col-lg-6" [attr.aria-labelledby]="'list-' + list.key">
+        <div class="card shadow-sm border-0 h-100" [attr.data-list]="list.key">
+          <div class="card-body">
+            <div class="d-flex align-items-baseline justify-content-between gap-2 mb-2">
+              <h2 class="h6 mb-0" [id]="'list-' + list.key">{{ list.title }}</h2>
+              <span *ngIf="list.state.tasks && list.state.total > list.state.tasks.length" class="small text-muted list-count">
+                {{ list.state.tasks.length }} / {{ list.state.total }}
+              </span>
+            </div>
+            <p *ngIf="list.hint" class="small text-muted mb-2">{{ list.hint }}</p>
+
+            <div *ngIf="list.state.loading && !list.state.tasks" class="text-muted small" role="status">
+              <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Yükleniyor…
+            </div>
+            <div *ngIf="list.state.failed" class="small text-danger" role="alert">
+              Liste yüklenemedi.
+              <button type="button" class="btn btn-link btn-sm p-0 align-baseline" (click)="retry()">Tekrar dene</button>
+            </div>
+            <p *ngIf="!list.state.failed && list.state.tasks?.length === 0" class="text-muted small mb-0">{{ list.empty }}</p>
+
+            <ul *ngIf="!list.state.failed && list.state.tasks?.length" class="list-unstyled mb-0 task-mini-list">
+              <li *ngFor="let task of list.state.tasks; trackBy: trackTask" [attr.data-task-id]="task.id">
+                <a
+                  [routerLink]="['/projects', task.projectId, 'tasks']"
+                  [queryParams]="listLink(list.key)"
+                  class="d-flex align-items-center gap-2 py-2 text-decoration-none text-body"
+                >
+                  <span class="flex-grow-1 min-w-0">
+                    <span class="d-block text-truncate fw-medium">{{ task.title }}</span>
+                    <span class="d-block small text-muted text-truncate">{{ projectName(task) }}</span>
+                  </span>
+                  <span class="text-end small text-nowrap">
+                    <span class="badge status-badge" [ngClass]="'status-' + task.status">{{ statusLabels[task.status] }}</span>
+                    <span *ngIf="task.dueDate; else noDue" class="d-block mt-1" [class.text-danger]="overdue(task)" [class.fw-semibold]="overdue(task)">
+                      {{ task.dueDate | date: 'dd.MM.yyyy' }}<span *ngIf="overdue(task)"> · gecikti</span>
+                    </span>
+                    <ng-template #noDue><span class="d-block mt-1 text-muted">Tarih yok</span></ng-template>
+                  </span>
+                </a>
               </li>
             </ul>
           </div>
