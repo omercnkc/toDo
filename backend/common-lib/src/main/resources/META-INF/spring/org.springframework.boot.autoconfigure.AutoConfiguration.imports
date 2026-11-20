@@ -1,2 +1,3 @@
 com.kafein.todo.common.web.CommonWebAutoConfiguration
 com.kafein.todo.common.feign.CommonFeignAutoConfiguration
+com.kafein.todo.common.openapi.CommonOpenApiAutoConfiguration

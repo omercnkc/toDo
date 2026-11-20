@@ -37,6 +37,8 @@
         <jjwt.version>0.12.6</jjwt.version>
         <!-- Boot 3.3'ün getirdiği 1.19.8, Docker 29'un asgari API sürümünü (1.40+) karşılamıyor -->
         <testcontainers.version>1.21.4</testcontainers.version>
+        <!-- 2.6.x Spring Boot 3.3 ile uyumlu seri (2.7+ Boot 3.4 ister) -->
+        <springdoc.version>2.6.0</springdoc.version>
     </properties>
 
     <dependencyManagement>
@@ -57,6 +59,22 @@
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct</artifactId>
                 <version>${mapstruct.version}</version>
+            </dependency>
+            <!-- OpenAPI: servisler yalnızca JSON (webmvc-api), Swagger UI gateway'de (webflux-ui) -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-common</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+                <version>${springdoc.version}</version>
             </dependency>
             <!-- JWT (Spring Boot sürüm yönetimine dahil değil) -->
             <dependency>

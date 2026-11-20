@@ -122,6 +122,7 @@ Gizli bilgiler repoda tutulmaz. `.env.example`'ı `.env` olarak kopyalayıp dold
 | `JWT_SECRET` | HS256 imza anahtarı (en az 32 bayt) |
 | `COOKIE_SECURE` | Refresh cookie'nin `Secure` bayrağı (yerel http'de `false`) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | İlk açılışta oluşturulan ADMIN kullanıcısı |
+| `API_DOCS_ENABLED` | OpenAPI belgeleri ve Swagger UI (varsayılan `true`; üretimde `false` yapılabilir) |
 | `FRONTEND_ORIGIN` | Tarayıcının gördüğü frontend adresi (varsayılan `http://localhost:4200`). Gateway CORS'u ve refresh/logout Origin kontrolü buna göre yapılır; farklı bir adreste yayınlıyorsanız birebir aynı yazılmalı, yoksa POST istekleri 403 alır |
 
 ## Portlar
@@ -137,6 +138,8 @@ Gizli bilgiler repoda tutulmaz. `.env.example`'ı `.env` olarak kopyalayıp dold
 ## API Özeti
 
 Tüm istekler gateway üzerinden `/api` ile başlar. Tam sözleşme: [docs/06-api-contracts.md](docs/06-api-contracts.md)
+
+**Swagger UI:** http://localhost:8080/swagger-ui.html — servis üstteki listeden seçilir; "Authorize"a `POST /auth/login` yanıtındaki `accessToken` girilerek "Try it out" ile denenebilir.
 
 | Alan | Örnek uçlar |
 |---|---|

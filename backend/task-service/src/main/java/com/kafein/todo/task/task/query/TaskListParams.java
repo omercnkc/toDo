@@ -1,5 +1,7 @@
 package com.kafein.todo.task.task.query;
 
+import io.swagger.v3.oas.annotations.Parameter;
+
 import java.util.List;
 
 /**
@@ -13,6 +15,14 @@ import java.util.List;
  * verilebilir. {@code sort} {@code alan,yön} çiftleridir ({@code sort=dueDate,asc&sort=title}); Spring tek değeri
  * virgülden böldüğü için ayrıştırıcı değerleri parçalara ayırıp sırayla okur (alan, ardından isteğe bağlı yön).
  */
-public record TaskListParams(List<String> status, List<String> priority, String assigneeId, String q,
-                             String dueFrom, String dueTo, String overdue, List<String> sort) {
+public record TaskListParams(
+        @Parameter(description = "TODO, IN_PROGRESS, DONE (virgülle ya da tekrarla birden fazla)") List<String> status,
+        @Parameter(description = "LOW, MEDIUM, HIGH (virgülle ya da tekrarla birden fazla)") List<String> priority,
+        @Parameter(description = "Atanan kullanıcı id'si ya da `none` (atanmamışlar)") String assigneeId,
+        @Parameter(description = "Başlık veya açıklamada geçen metin (en fazla 200 karakter)") String q,
+        @Parameter(description = "Bitiş tarihi alt sınırı, dahil (YYYY-AA-GG)") String dueFrom,
+        @Parameter(description = "Bitiş tarihi üst sınırı, dahil (YYYY-AA-GG)") String dueTo,
+        @Parameter(description = "`true`: bitiş tarihi geçmiş ve DONE olmayanlar") String overdue,
+        @Parameter(description = "`alan[,asc|desc]`, tekrarlanabilir; alanlar: dueDate, priority, createdAt, title, "
+                + "status. Varsayılan createdAt,desc") List<String> sort) {
 }

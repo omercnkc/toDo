@@ -55,6 +55,14 @@ eureka:
     lease-renewal-interval-in-seconds: 10
     lease-expiration-duration-in-seconds: 30
 
+springdoc:
+  api-docs:
+    # OpenAPI belgesi (/v3/api-docs); gateway'deki Swagger UI okur. Üretimde kapatılabilir.
+    enabled: ${API_DOCS_ENABLED:true}
+  # @RestControllerAdvice'taki her hata yanıtını tüm uçlara ekleme; hata kodları uç başına yazılır
+  override-with-generic-response: false
+  default-produces-media-type: application/json
+
 management:
   endpoints:
     web:

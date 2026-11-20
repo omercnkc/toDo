@@ -15,6 +15,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.net.URI;
 import java.time.Duration;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
  * Gerçek port üzerinde route, CORS ve kimlik filtresi davranışı.
  * Eureka kapalı olduğu için hiçbir servisin örneği yok: route'a eşleşen ve filtreden
@@ -141,6 +143,37 @@ class GatewayRoutingIntegrationTest {
                 .exchange()
                 .expectStatus().isUnauthorized()
                 .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, ALLOWED_ORIGIN);
+    }
+
+    @Test
+    void apiDocsAreRoutedWithoutToken() {
+        for (String service : new String[]{"auth", "project", "task", "dashboard"}) {
+            client.get().uri("/api/docs/" + service)
+                    .exchange()
+                    .expectStatus().isEqualTo(503); // 401 değil: açık yol, lb:// hedefine yönlendirildi
+        }
+    }
+
+    @Test
+    void apiDocsRoutesAcceptOnlyKnownServicesAndGet() {
+        client.post().uri("/api/docs/auth").exchange().expectStatus().isNotFound();
+        client.get().uri("/api/docs/discovery-server").exchange().expectStatus().isNotFound();
+        // /api/docs/** açık yol olsa da başka bir servise sızmaz
+        client.get().uri("/api/docs/auth/../users/me").exchange().expectStatus().value(status ->
+                assertThat(status).isIn(400, 404));
+    }
+
+    @Test
+    void swaggerUiListsEveryService() {
+        client.get().uri("/swagger-ui.html").exchange().expectStatus().is3xxRedirection();
+        client.get().uri("/v3/api-docs/swagger-config")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.urls.length()").isEqualTo(4)
+                .jsonPath("$.urls[0].url").isEqualTo("/api/docs/auth")
+                .jsonPath("$.urls[*].name").value(names -> assertThat(names.toString())
+                        .contains("auth-service", "project-service", "task-service", "dashboard-service"));
     }
 
     private static String validToken() {

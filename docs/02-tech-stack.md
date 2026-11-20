@@ -14,7 +14,7 @@
 | MySQL | 8.x | Veritabanı |
 | Flyway | | Şema migration |
 | MapStruct + Lombok | | DTO eşleme, boilerplate azaltma |
-| springdoc-openapi | | Swagger UI (her serviste) |
+| springdoc-openapi | 2.6.0 | Servisler yalnızca OpenAPI JSON üretir (`webmvc-api`); tek Swagger UI gateway'de (`webflux-ui`) |
 | JUnit 5, Mockito, Testcontainers 1.21.4 | | Test (Testcontainers sürümü Boot'un getirdiği 1.19.8'den yükseltildi: Docker 29 uyumu) |
 | Maven | multi-module | Build |
 | Docker / Docker Compose | | Paketleme ve çalıştırma |

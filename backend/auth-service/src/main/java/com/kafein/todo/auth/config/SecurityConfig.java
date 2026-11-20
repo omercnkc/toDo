@@ -1,5 +1,6 @@
 package com.kafein.todo.auth.config;
 
+import com.kafein.todo.common.openapi.ApiDocsPaths;
 import com.kafein.todo.common.security.JwtAuthenticationFilter;
 import com.kafein.todo.common.security.JwtService;
 import com.kafein.todo.common.security.web.ApiErrorAccessDeniedHandler;
@@ -48,6 +49,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, PUBLIC_AUTH_ENDPOINTS).permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        // OpenAPI belgesi (gateway'deki Swagger UI okur; API_DOCS_ENABLED=false ile kapanır)
+                        .requestMatchers(HttpMethod.GET, ApiDocsPaths.PATTERNS).permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling

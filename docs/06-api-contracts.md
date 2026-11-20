@@ -13,6 +13,16 @@ Tüm istekler gateway üzerinden: `http://localhost:8080/api/...`. Gövde JSON. 
 ```
 - HTTP kodları: 200/201/204, 400 (doğrulama), 401 (kimlik yok/geçersiz), 403 (yetki yok), 404, 409 (çakışma, ör. e-posta kayıtlı).
 
+## OpenAPI / Swagger UI
+- **Swagger UI:** http://localhost:8080/swagger-ui.html (gateway). Üstteki listeden servis seçilir (auth, project, task, dashboard).
+- **Belgeler:** `GET /api/docs/{auth|project|task|dashboard}` → servisin `/v3/api-docs`'u (token gerekmez; yalnızca GET). Sunucu adresi `/api` olduğu için "Try it out" istekleri gateway'den geçer.
+- **Kimlik:** "Authorize" → `POST /auth/login` yanıtındaki `accessToken` (Bearer). Herkese açık uçlar (register/login/refresh/logout) kilitsiz görünür.
+- **Hatalar:** her uçta uca özgü kodlar (`409 EMAIL_ALREADY_EXISTS` gibi) açıklamada; tüm 4xx/5xx gövdeleri `ApiError`. Korumalı uçlara 401, gövdesi/parametresi olan uçlara 400 otomatik eklenir (common-lib `TodoOpenApiCustomizer`).
+- **Dışarıda kalanlar:** `/internal/**` uçları ve yalnızca onların kullandığı DTO'lar belgede yoktur (gateway'de route'ları da yok).
+- `POST /auth/refresh` Swagger UI'dan çalışmaz: gateway cookie'li isteklerde `Origin`'i denetler, Swagger UI farklı origin'dedir (`:8080`). Token süresi dolarsa yeniden login.
+- Her servisin testi (`OpenApiDocsIntegrationTest`) belgedeki uç listesinin bu dosyadaki tablolarla birebir aynı olduğunu doğrular; yeni bir uç eklenince test ve bu belge birlikte güncellenir.
+- `API_DOCS_ENABLED=false`: servisler belge üretmez, gateway Swagger UI'ı kapatır.
+
 ## auth-service
 | Metot | Yol | Yetki | Açıklama |
 |---|---|---|---|

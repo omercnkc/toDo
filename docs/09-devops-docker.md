@@ -88,7 +88,7 @@ CREATE USER 'task_user'@'%'    IDENTIFIED BY '...'; GRANT ALL ON task_db.*    TO
 (Gerçek betikte `...` yerine `${AUTH_DB_PASSWORD}` vb. gelir.)
 
 ## Konfigürasyon
-- Her serviste `application.yml` (varsayılanlar) + ortam değişkeni override: `SPRING_DATASOURCE_*`, `JWT_SECRET`, `EUREKA_URL`, `SERVER_PORT`, `COOKIE_SECURE` (auth-service; yerel http'de `false`), `OUTBOX_*` (project-service relay aralığı/parti boyutu/maks. deneme; varsayılanlar 5 sn / 20 / 10).
+- Her serviste `application.yml` (varsayılanlar) + ortam değişkeni override: `SPRING_DATASOURCE_*`, `JWT_SECRET`, `EUREKA_URL`, `SERVER_PORT`, `COOKIE_SECURE` (auth-service; yerel http'de `false`), `OUTBOX_*` (project-service relay aralığı/parti boyutu/maks. deneme; varsayılanlar 5 sn / 20 / 10), `API_DOCS_ENABLED` (gateway + 4 servis; OpenAPI belgeleri ve Swagger UI, varsayılan `true`).
 - Profiller: `local` (localhost MySQL/Eureka), `docker` (compose host adları).
 - `.env.example` repoda, `.env` gitignore'da.
 

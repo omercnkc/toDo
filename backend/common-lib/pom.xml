@@ -81,6 +81,12 @@
             <artifactId>feign-core</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Ortak OpenAPI ayarları (CommonOpenApiAutoConfiguration); springdoc'u servis kendisi ekler -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-common</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

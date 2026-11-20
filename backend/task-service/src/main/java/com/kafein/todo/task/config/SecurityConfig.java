@@ -1,5 +1,6 @@
 package com.kafein.todo.task.config;
 
+import com.kafein.todo.common.openapi.ApiDocsPaths;
 import com.kafein.todo.common.security.JwtAuthenticationFilter;
 import com.kafein.todo.common.security.JwtService;
 import com.kafein.todo.common.security.Role;
@@ -9,6 +10,7 @@ import com.kafein.todo.common.security.web.ApiErrorAuthenticationEntryPoint;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -42,6 +44,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        // OpenAPI belgesi (gateway'deki Swagger UI okur; API_DOCS_ENABLED=false ile kapanır)
+                        .requestMatchers(HttpMethod.GET, ApiDocsPaths.PATTERNS).permitAll()
                         .requestMatchers("/error").permitAll()
                         // Dahili uçları yalnızca project-service'in outbox relay'i çağırır (servis token'ı)
                         .requestMatchers("/internal/**").hasRole(ServicePrincipal.ROLE)

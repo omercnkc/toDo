@@ -60,6 +60,8 @@ services:
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:4200}
       # auth-service ile aynı anahtar (gateway token'ları doğrular)
       JWT_SECRET: ${JWT_SECRET:?.env içinde JWT_SECRET gerekli}
+      # OpenAPI belgeleri + Swagger UI (http://localhost:8080/swagger-ui.html); false ile kapanır
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       TZ: Europe/Istanbul
     ports:
       - "8080:8080"   # dış dünyaya açılan tek backend portu
@@ -89,6 +91,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       EUREKA_URL: http://discovery-server:8761/eureka
       EUREKA_INSTANCE_HOSTNAME: auth-service
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       TZ: Europe/Istanbul
     # Port yayınlanmaz: yalnızca gateway üzerinden erişilir (docs/03)
     depends_on:
@@ -116,6 +119,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?.env içinde JWT_SECRET gerekli}
       EUREKA_URL: http://discovery-server:8761/eureka
       EUREKA_INSTANCE_HOSTNAME: project-service
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       TZ: Europe/Istanbul
     # Port yayınlanmaz: yalnızca gateway üzerinden erişilir (docs/03)
     depends_on:
@@ -143,6 +147,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?.env içinde JWT_SECRET gerekli}
       EUREKA_URL: http://discovery-server:8761/eureka
       EUREKA_INSTANCE_HOSTNAME: task-service
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       TZ: Europe/Istanbul
     # Port yayınlanmaz: yalnızca gateway üzerinden erişilir (docs/03)
     depends_on:
@@ -167,6 +172,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?.env içinde JWT_SECRET gerekli}
       EUREKA_URL: http://discovery-server:8761/eureka
       EUREKA_INSTANCE_HOSTNAME: dashboard-service
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       TZ: Europe/Istanbul
     # Port yayınlanmaz: yalnızca gateway üzerinden erişilir (docs/03)
     depends_on:
