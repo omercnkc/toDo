@@ -7,7 +7,7 @@
 | discovery-server | multi-stage (Maven → `eclipse-temurin:21-jre`) | |
 | api-gateway | aynı | Dışarı 8080 |
 | auth/project/task/dashboard | aynı | Dışarı port açılmaz (geliştirmede debug için açılabilir) |
-| frontend | multi-stage (Node 14 build → `nginx:alpine`) | `nginx.conf`: SPA fallback `try_files ... /index.html` + `location /api/ { proxy_pass http://api-gateway:8080; }` (aynı origin → httpOnly cookie sorunsuz) |
+| frontend | multi-stage (`node:14.18.1-alpine` build → `nginxinc/nginx-unprivileged`) | Dışarı 4200 (konteyner içi 8080, root olmayan nginx). `frontend/nginx.conf`: SPA fallback, `/api/` → `api-gateway:8080` (aynı origin → httpOnly cookie sorunsuz), gzip, önbellek başlıkları |
 
 ## Backend Dockerfile (tüm servisler için tek dosya)
 `backend/Dockerfile` ortaktır; derlenecek servis `SERVICE` build argümanıyla seçilir (compose'da `x-backend-build` + `args.SERVICE`). Özet:
@@ -17,19 +17,17 @@
 - Kök dizindeki `.dockerignore` `target/`, `node_modules`, `.env`, `.git`, `docs` vb. dışarıda bırakır.
 - Windows: `docker compose build` "failed to execute bake" verirse terminal dizini büyük sürücü harfiyle (`D:\`) açılmalı (buildx `d:` / `D:` yazımlarını farklı yol sayıyor).
 
-## Frontend Dockerfile (örnek)
-```dockerfile
-FROM node:14.18.1 AS build
-WORKDIR /app
-COPY frontend/package*.json ./
-RUN npm ci
-COPY frontend/ .
-RUN npm run build -- --configuration production
+## Frontend Dockerfile (`frontend/Dockerfile`)
+Build context repo köküdür (backend ile aynı). Özet:
+- Build aşaması `node:14.18.1-alpine` (`package.json` engines ile aynı): önce yalnızca `package*.json` kopyalanır, `npm ci` (npm önbelleği BuildKit cache mount'unda) → kaynak değişince bağımlılık katmanı önbellekten gelir; `ng build --configuration production` → `dist/todo-frontend`.
+- Runtime `nginxinc/nginx-unprivileged:1.27-alpine`: root olmayan kullanıcı, 8080'i dinler; compose `4200:8080`. Healthcheck `wget --spider http://127.0.0.1:8080/`.
 
-FROM nginx:alpine
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist/todo-frontend /usr/share/nginx/html
-```
+`frontend/nginx.conf`:
+- **SPA:** `try_files $uri $uri/ /index.html` — `/projects/12/board` gibi derin bağlantılar ve yenileme çalışır.
+- **`/api/` → gateway:** `proxy_pass` URI'siz verildiği için yol `/api` önekiyle olduğu gibi gider (gateway `StripPrefix=1` yapar). Gateway adı değişkenle + Docker DNS'i (`resolver 127.0.0.11 valid=10s`) ile her istekte çözülür: nginx gateway'den önce açılabilir, gateway yeniden başlayıp IP değiştirse de bağlantı kopmaz. `X-Forwarded-For`/`X-Real-IP` iletilir.
+- **Önbellek:** hash'li dosyalar (`main.<hash>.js` vb.) `max-age=31536000, immutable`; bulunamazlarsa 404 (eski sürümün JS'i istenirse `index.html` dönmez). `index.html` ve diğer yollar `no-cache` (her açılışta sunucuya sorulur, yeni sürüm hemen yansır).
+- **gzip:** JS/CSS/JSON/SVG, 1 KB üstü.
+- Tarayıcı adresi `FRONTEND_ORIGIN` ile aynı olmalı (varsayılan `http://localhost:4200`); refresh/logout istekleri gateway'in Origin kontrolünden geçer.
 
 ## docker-compose.yml (iskelet)
 ```yaml
@@ -71,7 +69,8 @@ services:
   # project-service, task-service, dashboard-service aynı kalıp (dashboard-service DB'siz: yalnızca JWT_SECRET + Eureka, depends_on discovery-server)
   frontend:
     build: { context: ., dockerfile: frontend/Dockerfile }
-    ports: ["4200:80"]
+    ports: ["4200:8080"]   # root olmayan nginx 8080'i dinler
+    depends_on: { api-gateway: { condition: service_started } }
 volumes:
   mysql_data:
 ```

@@ -96,17 +96,20 @@ npm ci
 npm start                       # http://localhost:4200  (/api -> :8080 proxy)
 ```
 
-Altyapı servisleri Docker ile de çalıştırılabilir (Eureka paneli: http://localhost:8761):
+**Tüm sistem Docker ile** (MySQL, Eureka, gateway, 4 servis ve nginx'teki frontend):
 
 ```bash
-docker compose up -d --build discovery-server api-gateway auth-service
+cp .env.example .env            # değerleri doldurun
+docker compose up -d --build    # ilk derleme birkaç dakika sürer
 ```
+
+Uygulama http://localhost:4200 adresinde (nginx `/api` isteklerini gateway'e iletir), Eureka paneli http://localhost:8761.
+Tarayıcıda `127.0.0.1:4200` değil `localhost:4200` kullanın: gateway'in izin verdiği Origin `FRONTEND_ORIGIN`'dir.
+Docker'daki frontend ile `npm start` aynı anda çalışamaz (ikisi de 4200 portunu kullanır).
 
 > **Windows notu:** `docker compose build`, `failed to execute bake: exit status 1` hatası verirse terminalin
 > çalışma dizinini sürücü harfi büyük olacak şekilde açın (`cd D:\...`, `d:\...` değil). buildx bu iki yazımı
 > farklı klasör sayıp Dockerfile'ı izinli alanın dışında görüyor.
-
-Tüm sistemi Docker ile ayağa kaldırma (`docker compose up --build`) Faz 7'de tamamlanacak.
 
 ## Yapılandırma
 
@@ -125,7 +128,7 @@ Gizli bilgiler repoda tutulmaz. `.env.example`'ı `.env` olarak kopyalayıp dold
 
 | Bileşen | Port |
 |---|---|
-| frontend (dev) | 4200 |
+| frontend (`npm start` ya da Docker'da nginx) | 4200 |
 | api-gateway | 8080 |
 | auth / project / task / dashboard | 8081 / 8082 / 8083 / 8084 |
 | discovery-server (Eureka paneli) | 8761 |

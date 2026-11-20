@@ -2,6 +2,7 @@ name: todo
 
 # Servisler ilgili fazlarda eklenir (bkz. docs/09-devops-docker.md).
 # Faz 0: MySQL. Faz 1: discovery-server + api-gateway. Faz 2: auth-service. Faz 3: project-service. Faz 4: task-service.
+# Faz 6: dashboard-service. Faz 7: frontend (nginx). Tüm sistem: `docker compose up --build` → http://localhost:4200
 
 # Backend servislerinin ortak build ayarı (SERVICE argümanı servis başına verilir)
 x-backend-build: &backend-build
@@ -177,6 +178,23 @@ services:
       timeout: 5s
       retries: 10
       start_period: 40s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    # nginx: Angular SPA + /api → api-gateway (aynı origin). Tarayıcı adresi FRONTEND_ORIGIN ile aynı olmalı.
+    ports:
+      - "4200:8080"
+    depends_on:
+      api-gateway:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   mysql_data:
