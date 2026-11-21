@@ -45,6 +45,10 @@ describe('ProjectFormComponent', () => {
     return (fixture.nativeElement as HTMLElement).textContent ?? '';
   }
 
+  function el(): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
   beforeEach(() => {
     projects = jasmine.createSpyObj<ProjectService>('ProjectService', ['get', 'create', 'update']);
     toast = jasmine.createSpyObj<ToastService>('ToastService', ['success', 'error']);
@@ -131,12 +135,35 @@ describe('ProjectFormComponent', () => {
       expect(text()).toContain('Arşivlenmiş proje düzenlenemez');
     });
 
-    it('proje yoksa listeye döner', async () => {
+    it('proje yoksa / erişim yoksa / yüklenemezse sayfada durum kartı (form gösterilmez)', async () => {
       projects.get.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
       await create('7');
+      expect(text()).toContain('Proje bulunamadı');
+      expect(el().querySelector('form')).toBeNull();
+      expect(router.navigate).not.toHaveBeenCalled();
 
-      expect(toast.error).toHaveBeenCalledWith('Proje bulunamadı.');
-      expect(router.navigate).toHaveBeenCalledWith(['/projects']);
+      projects.get.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+      component.load();
+      fixture.detectChanges();
+      expect(text()).toContain('Bu projeye erişimin yok');
+
+      projects.get.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+      component.load();
+      fixture.detectChanges();
+      expect(text()).toContain('Proje yüklenemedi');
+      projects.get.and.returnValue(of(PROJECT));
+      Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent?.includes('Tekrar dene'))!.click();
+      fixture.detectChanges();
+      expect(el().querySelector('form')).not.toBeNull();
+    });
+
+    it('geçersiz id: istek atmadan "Proje bulunamadı", yeni proje formuna dönüşmez', async () => {
+      await create('abc');
+
+      expect(projects.get).not.toHaveBeenCalled();
+      expect(text()).toContain('Proje bulunamadı');
+      expect(text()).not.toContain('Yeni proje');
+      expect(el().querySelector('form')).toBeNull();
     });
   });
 });

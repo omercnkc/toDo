@@ -313,6 +313,13 @@ describe('KanbanBoardComponent', () => {
     expect(component.modalTask?.id).toBe(3);
     component.closeModal();
 
+    // role="button" olduğu için Space de açmalı (sayfa kaydırılmadan)
+    const space = new KeyboardEvent('keydown', { key: ' ', cancelable: true });
+    column('TODO').querySelector<HTMLElement>('[data-task-id="2"]')!.dispatchEvent(space);
+    expect(component.modalTask?.id).toBe(2);
+    expect(space.defaultPrevented).toBeTrue();
+    component.closeModal();
+
     Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) => b.textContent?.includes('Yeni görev'))!
       .click();
     expect(component.modalTask).toBeNull();

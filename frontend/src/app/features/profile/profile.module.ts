@@ -8,6 +8,6 @@ import { ProfileComponent } from './profile.component';
 /** /profile (lazy): kişinin kendi bilgileri, ad güncelleme ve şifre değiştirme. */
 @NgModule({
   declarations: [ProfileComponent],
-  imports: [SharedModule, ReactiveFormsModule, RouterModule.forChild([{ path: '', component: ProfileComponent }])],
+  imports: [SharedModule, ReactiveFormsModule, RouterModule.forChild([{ path: '', component: ProfileComponent, data: { title: 'Profil' } }])],
 })
 export class ProfileModule {}

@@ -13,8 +13,8 @@ import { TaskViewSwitchComponent } from './view-switch/task-view-switch.componen
 
 /** `/projects/:id/...` altındaki görev sayfaları; `:id` üst route'ta (projects modülü). */
 const routes: Routes = [
-  { path: 'board', component: KanbanBoardComponent },
-  { path: 'tasks', component: TaskListComponent },
+  { path: 'board', component: KanbanBoardComponent, data: { title: 'Kanban panosu' } },
+  { path: 'tasks', component: TaskListComponent, data: { title: 'Görev listesi' } },
 ];
 
 /**

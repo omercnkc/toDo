@@ -41,16 +41,33 @@
 .task-row,
 .task-card {
   cursor: pointer;
+}
+
+.task-card:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: -2px;
+}
+
+// `anywhere` değil: o, tablonun en küçük sütun genişliğini tek harfe indirip başlığı harf harf kırıyordu
+.task-title {
+  font-weight: 500;
+  overflow-wrap: break-word;
+}
+
+.task-title-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-weight: inherit;
+  text-align: start;
+  overflow-wrap: break-word;
 
   &:focus-visible {
     outline: 2px solid var(--bs-primary);
-    outline-offset: -2px;
+    outline-offset: 2px;
+    border-radius: 0.125rem;
   }
-}
-
-.task-title {
-  font-weight: 500;
-  overflow-wrap: anywhere;
 }
 
 // Mobilde filtreler "Filtreler" düğmesiyle açılır (arama her zaman görünür); masaüstünde her zaman açık

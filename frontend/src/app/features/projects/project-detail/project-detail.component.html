@@ -8,24 +8,20 @@
 </div>
 
 <!-- Hata durumları -->
-<div *ngIf="error" class="card shadow-sm border-0">
-  <div class="card-body p-5 text-center" [ngSwitch]="error">
-    <ng-container *ngSwitchCase="'notFound'">
-      <h1 class="h5">Proje bulunamadı</h1>
-      <p class="text-muted">Proje silinmiş ya da adres hatalı olabilir.</p>
-    </ng-container>
-    <ng-container *ngSwitchCase="'forbidden'">
-      <h1 class="h5">Bu projeye erişimin yok</h1>
-      <p class="text-muted">Projeyi yalnızca üyeleri görebilir. Projeden çıkarılmış olabilirsin.</p>
-    </ng-container>
-    <ng-container *ngSwitchDefault>
-      <h1 class="h5">Proje yüklenemedi</h1>
-      <p class="text-muted">Bağlantını kontrol edip tekrar dene.</p>
-      <button type="button" class="btn btn-outline-secondary me-2" (click)="retry()">Tekrar dene</button>
-    </ng-container>
+<ng-container *ngIf="error" [ngSwitch]="error">
+  <app-state-panel *ngSwitchCase="'notFound'" [level]="1" tone="error" heading="Proje bulunamadı"
+    message="Proje silinmiş ya da adres hatalı olabilir.">
     <a routerLink="/projects" class="btn btn-primary">Projelerime dön</a>
-  </div>
-</div>
+  </app-state-panel>
+  <app-state-panel *ngSwitchCase="'forbidden'" [level]="1" tone="error" heading="Bu projeye erişimin yok"
+    message="Projeyi yalnızca üyeleri görebilir. Projeden çıkarılmış olabilirsin.">
+    <a routerLink="/projects" class="btn btn-primary">Projelerime dön</a>
+  </app-state-panel>
+  <app-state-panel *ngSwitchDefault [level]="1" tone="error" heading="Proje yüklenemedi" message="Bağlantını kontrol edip tekrar dene.">
+    <button type="button" class="btn btn-outline-secondary" (click)="retry()">Tekrar dene</button>
+    <a routerLink="/projects" class="btn btn-primary">Projelerime dön</a>
+  </app-state-panel>
+</ng-container>
 
 <ng-container *ngIf="project && !error">
   <!-- Başlık -->

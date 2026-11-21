@@ -35,10 +35,14 @@
   </div>
 </div>
 
-<div *ngIf="loadFailed" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="alert">
-  <span>Projeler yüklenemedi.</span>
+<!-- Liste ekrandayken başarısız yenileme listeyi silmez; liste yokken durum kartı -->
+<div *ngIf="loadFailed && result" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="alert">
+  <span>Projeler yüklenemedi; gösterilen liste güncel olmayabilir.</span>
   <button type="button" class="btn btn-sm btn-outline-secondary" (click)="retry()">Tekrar dene</button>
 </div>
+<app-state-panel *ngIf="loadFailed && !result" tone="error" heading="Projeler yüklenemedi" message="Bağlantını kontrol edip tekrar dene.">
+  <button type="button" class="btn btn-outline-secondary" (click)="retry()">Tekrar dene</button>
+</app-state-panel>
 
 <div *ngIf="loading && !result" class="d-flex align-items-center gap-2 text-muted" role="status">
   <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -47,21 +51,14 @@
 
 <ng-container *ngIf="result">
   <!-- Boş durumlar -->
-  <div *ngIf="isFirstRun" class="card shadow-sm border-0">
-    <div class="card-body p-5 text-center">
-      <h2 class="h5">Henüz bir projen yok</h2>
-      <p class="text-muted mb-4">Bir proje oluştur, ekibini davet et ve görevleri birlikte takip edin.</p>
-      <a routerLink="/projects/new" class="btn btn-primary">İlk projeni oluştur</a>
-    </div>
-  </div>
-  <div *ngIf="result.content.length === 0 && !isFirstRun" class="card shadow-sm border-0">
-    <div class="card-body p-5 text-center text-muted">
-      <ng-container *ngIf="query.q; else noFilterMatch">“{{ query.q }}” ile eşleşen proje yok.</ng-container>
-      <ng-template #noFilterMatch>
-        {{ query.status === 'ARCHIVED' ? 'Arşivlenmiş proje yok.' : 'Proje yok.' }}
-      </ng-template>
-    </div>
-  </div>
+  <app-state-panel *ngIf="isFirstRun" heading="Henüz bir projen yok"
+    message="Bir proje oluştur, ekibini davet et ve görevleri birlikte takip edin.">
+    <a routerLink="/projects/new" class="btn btn-primary">İlk projeni oluştur</a>
+  </app-state-panel>
+  <app-state-panel
+    *ngIf="result.content.length === 0 && !isFirstRun"
+    [heading]="query.q ? '“' + query.q + '” ile eşleşen proje yok.' : query.status === 'ARCHIVED' ? 'Arşivlenmiş proje yok.' : 'Proje yok.'"
+  ></app-state-panel>
 
   <!-- Kartlar -->
   <div

@@ -166,6 +166,13 @@ describe('LoginComponent', () => {
     expect(text()).not.toContain('Kaydın oluşturuldu');
   });
 
+  it('oturum düşünce gelince "oturumun sona erdi" bilgisini gösterir', async () => {
+    navigationState = { notice: 'sessionExpired' };
+    await create();
+
+    expect(text()).toContain('Oturumun sona erdi');
+  });
+
   it('şifre göster/gizle', async () => {
     await create();
     const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('#login-password');

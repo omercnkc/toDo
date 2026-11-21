@@ -87,6 +87,6 @@ export class RegisterComponent {
       return; // ErrorInterceptor bildirim gösterir
     }
     const apiError = extractApiError(error);
-    this.formError = apiError ? applyServerErrors(this.form, apiError) : 'Kayıt yapılamadı. Lütfen tekrar deneyin.';
+    this.formError = apiError ? applyServerErrors(this.form, apiError) : 'Kayıt yapılamadı. Lütfen tekrar dene.';
   }
 }

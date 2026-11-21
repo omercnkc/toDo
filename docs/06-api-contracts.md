@@ -187,7 +187,7 @@ Not: **Karar:** ilk sürümde task yanıtı yalnızca `assigneeId` döner; ad bi
 ## dashboard-service
 | Metot | Yol | Açıklama |
 |---|---|---|
-| GET | `/api/dashboard/summary?scope=mine\|all` | Kullanıcıya özel özet (`all` yalnızca ADMIN) |
+| GET | `/api/dashboard/summary?scope=mine\|all&fresh=true` | Kullanıcıya özel özet (`all` yalnızca ADMIN; `fresh` önbelleği atlar) |
 
 ```json
 { "scope": "mine", "projectCount": 4, "activeProjectCount": 3, "archivedProjectCount": 1,
@@ -203,7 +203,7 @@ Kurallar (6-C):
 - Toplamlar kapsamdaki **tüm** projeleri (arşivdekiler dahil) kapsar — görev listesindeki sayılarla birebir aynı olsun diye; arşivdeki projeler `status=ARCHIVED` ile ayırt edilir. `projects`: aktifler önce, sonra Türkçe ada göre, arşiv sonda.
 - `progressPercent` = tamamlanan / toplam, aşağı yuvarlanır (yalnızca hepsi bittiyse 100); görevsiz projede 0.
 - Proje listesinde olmayan projenin sayıları (kalıcı silinmiş, görevleri outbox ile henüz temizlenmemiş) alınmaz; toplamlar listedeki projelerden hesaplanır.
-- Önbellek: kullanıcı + rol + kapsam başına 30 sn (`dashboard.cache-ttl`, `DASHBOARD_CACHE_TTL`); görev değişikliği en geç bu sürede yansır, `generatedAt` hesaplama anıdır. Hatalar önbelleğe alınmaz.
+- Önbellek: kullanıcı + rol + kapsam başına 30 sn (`dashboard.cache-ttl`, `DASHBOARD_CACHE_TTL`); görev değişikliği en geç bu sürede yansır, `generatedAt` hesaplama anıdır. Hatalar önbelleğe alınmaz. `fresh=true` (7-D): önbellek okunmaz, yeni özet hesaplanıp önbelleğe yazılır; arayüz bunu yalnızca kullanıcı kendisi bir şey değiştirdikten sonraki ilk açılışta gönderir (başkalarının değişiklikleri yine en geç 30 sn'de yansır).
 - Kısmi yanıt yok: project-service veya task-service'e ulaşılamazsa 503 `PROJECT_SERVICE_UNAVAILABLE` / `TASK_SERVICE_UNAVAILABLE` (önbellekteki özet bu sürede dönmeye devam eder).
 - Yaklaşan bitiş tarihleri ve bana atanan görev listeleri bu yanıtta yok: frontend bunları projeler arası `GET /api/tasks` ucundan alır (6-E).
 

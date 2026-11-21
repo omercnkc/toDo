@@ -143,11 +143,26 @@ Uygulama notları (6-E) – kişisel listeler:
 ## Responsive
 - Bootstrap grid (`col-12 col-md-6 col-lg-4`), navbar mobilde offcanvas/collapse.
 - Kanban: masaüstünde 3 kolon yan yana; mobilde yatay kaydırma (scroll-snap) ya da kolonlar alt alta. CDK drag-drop dokunmatikte çalışır.
-- Tablolar küçük ekranda kart görünümüne düşer.
+- Tablolar küçük ekranda kart görünümüne düşer. Görev listesi tablosu (7 sütun) yalnızca ≥ 992 px'te; tablette de kartlar (7-D: 768'de başlık sütunu eziliyordu).
 - SCSS: `_variables.scss`, `_mixins.scss` (breakpoint mixin), bileşen bazlı stiller; Bootstrap değişkenleri override edilir.
 
 ## Hata / Yüklenme Durumları
 Tüm liste ekranlarında yükleniyor (skeleton/spinner), boş durum ve hata durumu mesajı; formlarda reaktif form doğrulaması (`ReactiveFormsModule`), sunucudan gelen `fieldErrors` alanlara eşlenir.
+
+Kurallar (7-D):
+- **Gösterilecek veri yoksa** (ilk yükleme başarısız, bulunamadı, erişim yok, boş liste) → ortak `StatePanelComponent` (`app-state-panel`: başlık + açıklama + düğmeler; hata `tone="error"` ile `role="alert"`). Proje sayfaları (detay, düzenleme, pano, görev listesi) aynı üç durumu aynı metinlerle gösterir: "Proje bulunamadı" (404/geçersiz id), "Bu projeye erişimin yok" (403), "… yüklenemedi" + Tekrar dene.
+- **Eski veri ekrandaysa** (yenileme başarısız) → veriyi silmeyen satır içi uyarı ("… gösterilen liste güncel olmayabilir" + Tekrar dene).
+- Ağ kopması / 5xx: sayfa kartına ek olarak `ErrorInterceptor` bildirimi ("Sunucuya ulaşılamıyor…"; aynı mesaj üst üste yığılmaz).
+- Oturum: refresh token'ı sunucu **reddederse** (401/403) oturum biter → `/login?returnUrl=…` + "Oturumun sona erdi" bilgisi; girişten sonra kaldığı sayfaya döner. Refresh **ağ hatası/5xx** ile başarısızsa oturum korunur, hata sayfaya iletilir (kısa kesinti çıkışa zorlamaz).
+- Bilinmeyen adres → çerçevesiz 404 sayfası.
+- Metinler "sen" diliyle (backend'den gelen mesajlar olduğu gibi gösterilir).
+
+## Erişilebilirlik (7-D)
+- `<html lang="tr">`; her sayfanın sekme başlığı route `data.title`'dan (`PageTitleService`: "Projeler · Görev Yöneticisi").
+- "İçeriğe atla" bağlantısı (ilk Tab); sayfa (yol) değişince odak `<main>`'e taşınır ve sayfa başa kayar (yalnızca sorgu parametresi değişen filtre/sayfalama gezinmelerinde odak yerinde kalır, geri tuşunda kaydırmaya dokunulmaz).
+- Odak görünürlüğü: bağlantılar ve `role="button"` öğelerde 2 px mor çerçeve, navbar'da beyaz; Bootstrap düğme/girdi halkaları korunur.
+- Tıklanabilir kartlar `div role="button"` + Enter/Space; görev tablosunda satır fareyle tıklanır, klavye/ekran okuyucu için başlık gerçek `<button>`.
+- Kontrast (WCAG AA): `$gray-600` `#5c636a` (text-muted, secondary; Bootstrap'in `#6c757d`'si açık zeminde 4.45:1 kalıyordu), navbar avatarı koyu zemin. Denetim: axe-core (wcag2a/aa, wcag21aa, best-practice) 18 sayfada 360 ve 1280 px'te 0 ihlal.
 
 ## Test
 Servisler ve interceptor için birim testler; Kanban `drop` mantığı için bileşen testi. E2E ilk sürümde opsiyonel (Cypress).

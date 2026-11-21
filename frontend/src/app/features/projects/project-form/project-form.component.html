@@ -8,10 +8,20 @@
   Proje yükleniyor…
 </div>
 
-<div *ngIf="loadFailed && !loading" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="alert">
-  <span>Proje yüklenemedi.</span>
-  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="load()">Tekrar dene</button>
-</div>
+<ng-container *ngIf="loadError && !loading" [ngSwitch]="loadError">
+  <app-state-panel *ngSwitchCase="'notFound'" tone="error" heading="Proje bulunamadı"
+    message="Proje silinmiş ya da adres hatalı olabilir.">
+    <a routerLink="/projects" class="btn btn-primary">Projelerime dön</a>
+  </app-state-panel>
+  <app-state-panel *ngSwitchCase="'forbidden'" tone="error" heading="Bu projeye erişimin yok"
+    message="Projeyi yalnızca üyeleri görebilir. Projeden çıkarılmış olabilirsin.">
+    <a routerLink="/projects" class="btn btn-primary">Projelerime dön</a>
+  </app-state-panel>
+  <app-state-panel *ngSwitchDefault tone="error" heading="Proje yüklenemedi" message="Bağlantını kontrol edip tekrar dene.">
+    <button type="button" class="btn btn-outline-secondary" (click)="load()">Tekrar dene</button>
+    <a routerLink="/projects" class="btn btn-primary">Projelerime dön</a>
+  </app-state-panel>
+</ng-container>
 
 <section *ngIf="!isEdit || project" class="card shadow-sm border-0 form-card">
   <div class="card-body p-4">

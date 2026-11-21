@@ -4,6 +4,7 @@ import { NgModule } from '@angular/core';
 import { AvatarComponent } from './components/avatar/avatar.component';
 import { PaginationComponent } from './components/pagination/pagination.component';
 import { FieldErrorComponent } from './components/field-error/field-error.component';
+import { StatePanelComponent } from './components/state-panel/state-panel.component';
 import { ToastContainerComponent } from './components/toast-container/toast-container.component';
 
 /**
@@ -13,8 +14,15 @@ import { ToastContainerComponent } from './components/toast-container/toast-cont
  * form kütüphanesi ana pakete girerdi (~60 kB). Form kullanan lazy modüller onu kendisi import eder.
  */
 @NgModule({
-  declarations: [ToastContainerComponent, FieldErrorComponent, AvatarComponent, PaginationComponent],
+  declarations: [ToastContainerComponent, FieldErrorComponent, AvatarComponent, PaginationComponent, StatePanelComponent],
   imports: [CommonModule],
-  exports: [CommonModule, ToastContainerComponent, FieldErrorComponent, AvatarComponent, PaginationComponent],
+  exports: [
+    CommonModule,
+    ToastContainerComponent,
+    FieldErrorComponent,
+    AvatarComponent,
+    PaginationComponent,
+    StatePanelComponent,
+  ],
 })
 export class SharedModule {}

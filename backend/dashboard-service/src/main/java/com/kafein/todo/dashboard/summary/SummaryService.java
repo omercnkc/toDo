@@ -44,7 +44,10 @@ import java.util.stream.Collectors;
  *       sıfırla görünür. Toplamlar listedeki projelerden hesaplanır, yani her zaman kendi içinde tutarlıdır.</li>
  *   <li>Kısmi yanıt yok: bir taraf ulaşılamazsa 503. Sayısız proje listesi "görev yok" gibi okunup yanıltırdı.</li>
  *   <li>Önbellek (Caffeine): anahtar kullanıcı + rol + kapsam, süre {@code dashboard.cache-ttl}. Hatalar
- *       önbelleğe alınmaz. Rol anahtarda: ADMIN yetkisi alınan kullanıcı eski kapsamla yanıt almasın.</li>
+ *       önbelleğe alınmaz. Rol anahtarda: ADMIN yetkisi alınan kullanıcı eski kapsamla yanıt almasın.
+ *       {@code fresh}: önbellek okunmaz, yeni hesaplanan özet önbelleğe yazılır. Arayüz bunu yalnızca kullanıcı
+ *       kendisi bir şey değiştirdikten sonraki ilk açılışta ister (kendi değişikliğini 30 sn beklemeden görsün);
+ *       maliyeti önbelleğin boş olduğu bir istekle aynı.</li>
  * </ul>
  * Paralel çağrılar sanal thread'lerde; Feign'in token ileten interceptor'ı token'ı istek bağlamından
  * ({@link RequestContextHolder}) okuduğu için bağlam çalışan thread'e taşınır.
@@ -106,13 +109,17 @@ public class SummaryService {
     }
 
     public DashboardSummary summary(AuthenticatedUser user, String scopeParam) {
+        return summary(user, scopeParam, false);
+    }
+
+    public DashboardSummary summary(AuthenticatedUser user, String scopeParam, boolean fresh) {
         Scope scope = Scope.parse(scopeParam);
         if (scope == Scope.ALL && !user.isAdmin()) {
             throw ApiException.forbidden("STATS_SCOPE_FORBIDDEN",
                     "Tüm sistemin istatistiklerini yalnızca yöneticiler görebilir");
         }
         CacheKey key = new CacheKey(user.id(), user.isAdmin(), scope);
-        DashboardSummary cached = cache.getIfPresent(key);
+        DashboardSummary cached = fresh ? null : cache.getIfPresent(key);
         if (cached != null) {
             return cached;
         }

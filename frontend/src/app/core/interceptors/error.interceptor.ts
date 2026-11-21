@@ -39,11 +39,11 @@ export class ErrorInterceptor implements HttpInterceptor {
 
   private notify(error: HttpErrorResponse, url: string): void {
     if (error.status === 0) {
-      this.toast.error('Sunucuya ulaşılamıyor. Bağlantınızı kontrol edip tekrar deneyin.');
+      this.toast.error('Sunucuya ulaşılamıyor. Bağlantını kontrol edip tekrar dene.');
     } else if (error.status >= 500) {
-      this.toast.error('Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.');
+      this.toast.error('Beklenmeyen bir hata oluştu. Lütfen tekrar dene.');
     } else if (error.status === 403 && !isAuthUrl(url)) {
-      this.toast.error(extractApiError(error)?.message ?? 'Bu işlem için yetkiniz yok.');
+      this.toast.error(extractApiError(error)?.message ?? 'Bu işlem için yetkin yok.');
     }
   }
 }

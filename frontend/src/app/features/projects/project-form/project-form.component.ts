@@ -36,7 +36,8 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
   readonly projectId: number | null;
   project: Project | null = null;
   loading = false;
-  loadFailed = false;
+  /** Düzenlenecek proje yüklenemedi; detay/pano sayfalarıyla aynı durum kartları gösterilir. */
+  loadError: 'notFound' | 'forbidden' | 'failed' | null = null;
   submitting = false;
   formError: string | null = null;
   /** Düzenlenemez durum (yetki yok / arşivde): form kilitli, açıklama gösterilir. */
@@ -51,28 +52,33 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     route: ActivatedRoute,
   ) {
-    const id = Number(route.snapshot.paramMap.get('id'));
+    const rawId = route.snapshot.paramMap.get('id');
+    const id = Number(rawId);
     this.projectId = Number.isInteger(id) && id > 0 ? id : null;
+    // `/projects/abc/edit` sessizce "Yeni proje" formuna dönüşmesin
+    if (rawId !== null && this.projectId === null) {
+      this.loadError = 'notFound';
+    }
   }
 
   get isEdit(): boolean {
-    return this.projectId !== null;
+    return this.projectId !== null || this.loadError === 'notFound';
   }
 
   /** Vazgeç/geri: düzenlemede projeye, oluşturmada listeye. */
   get backLink(): (string | number)[] {
-    return this.isEdit ? ['/projects', this.projectId as number] : ['/projects'];
+    return this.projectId !== null ? ['/projects', this.projectId] : ['/projects'];
   }
 
   ngOnInit(): void {
-    if (this.isEdit) {
+    if (this.projectId !== null) {
       this.load();
     }
   }
 
   load(): void {
     this.loading = true;
-    this.loadFailed = false;
+    this.loadError = null;
     this.projects
       .get(this.projectId as number)
       .pipe(
@@ -82,15 +88,8 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (project) => this.setProject(project),
         error: (error: unknown) => {
-          // 403'ü ErrorInterceptor bildirir; 404'te listeye dön
-          if (error instanceof HttpErrorResponse && (error.status === 404 || error.status === 403)) {
-            if (error.status === 404) {
-              this.toast.error('Proje bulunamadı.');
-            }
-            void this.router.navigate(['/projects']);
-            return;
-          }
-          this.loadFailed = true;
+          const status = error instanceof HttpErrorResponse ? error.status : 0;
+          this.loadError = status === 404 || status === 400 ? 'notFound' : status === 403 ? 'forbidden' : 'failed';
         },
       });
   }
@@ -163,6 +162,6 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
       return;
     }
     const apiError = extractApiError(error);
-    this.formError = apiError ? applyServerErrors(this.form, apiError) : 'Kaydedilemedi. Lütfen tekrar deneyin.';
+    this.formError = apiError ? applyServerErrors(this.form, apiError) : 'Kaydedilemedi. Lütfen tekrar dene.';
   }
 }

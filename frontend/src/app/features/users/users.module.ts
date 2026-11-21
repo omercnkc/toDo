@@ -8,6 +8,6 @@ import { UserListComponent } from './user-list/user-list.component';
 /** /admin/users (lazy, yalnızca ADMIN; RoleGuard app-routing'de). */
 @NgModule({
   declarations: [UserListComponent],
-  imports: [SharedModule, ReactiveFormsModule, RouterModule.forChild([{ path: '', component: UserListComponent }])],
+  imports: [SharedModule, ReactiveFormsModule, RouterModule.forChild([{ path: '', component: UserListComponent, data: { title: 'Kullanıcılar' } }])],
 })
 export class UsersModule {}

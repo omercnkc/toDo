@@ -226,7 +226,7 @@ export class TaskModalComponent implements OnInit, OnDestroy {
       return;
     }
     const apiError = extractApiError(error);
-    this.formError = apiError ? applyServerErrors(this.form, apiError) : 'İşlem tamamlanamadı. Lütfen tekrar deneyin.';
+    this.formError = apiError ? applyServerErrors(this.form, apiError) : 'İşlem tamamlanamadı. Lütfen tekrar dene.';
     // Görev silinmiş / proje arşivlenmiş olabilir: pano güncel hâli göstersin
     if (error instanceof HttpErrorResponse && (error.status === 404 || error.status === 409)) {
       this.changed.emit();

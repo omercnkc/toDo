@@ -195,7 +195,7 @@ describe('TaskListComponent', () => {
     expect(navigatedParams()).toEqual({ sort: 'dueDate,asc' });
   });
 
-  it('satıra tıklama ve Enter modalı açar; değişiklikten sonra aynı sayfa yeniden yüklenir', async () => {
+  it('satıra veya başlık düğmesine tıklama modalı açar; değişiklikten sonra aynı sayfa yeniden yüklenir', async () => {
     await create();
     const row = el().querySelector<HTMLElement>('tbody tr[data-task-id="2"]')!;
 
@@ -204,7 +204,10 @@ describe('TaskListComponent', () => {
     expect(el().querySelector('app-task-modal')).not.toBeNull();
     component.closeModal();
 
-    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    // Klavye/ekran okuyucu yolu: başlık gerçek bir düğme (Enter/Space tarayıcıda tıklamaya dönüşür)
+    spyOn(component, 'open').and.callThrough();
+    row.querySelector<HTMLButtonElement>('button.task-title-button')!.click();
+    expect(component.open).toHaveBeenCalledTimes(1);
     expect(component.modalTask?.id).toBe(2);
 
     component.onTaskChanged();

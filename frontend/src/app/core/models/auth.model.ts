@@ -29,5 +29,5 @@ export interface AuthResponse {
  */
 export interface LoginNavigationState {
   email?: string;
-  notice?: 'registered' | 'passwordChanged';
+  notice?: 'registered' | 'passwordChanged' | 'sessionExpired';
 }

@@ -6,6 +6,9 @@
     <div *ngSwitchCase="'passwordChanged'" class="alert alert-success" role="status">
       Şifren değişti ve tüm oturumların kapatıldı. Yeni şifrenle giriş yap.
     </div>
+    <div *ngSwitchCase="'sessionExpired'" class="alert alert-info" role="status">
+      Oturumun sona erdi. Kaldığın yerden devam etmek için tekrar giriş yap.
+    </div>
   </ng-container>
   <div *ngIf="formError" class="alert alert-danger" role="alert">{{ formError }}</div>
 

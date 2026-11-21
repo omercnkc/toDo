@@ -1,5 +1,8 @@
 // Bootstrap değişken override'ları (Bootstrap import'undan ÖNCE yüklenir).
 $primary: #4f46e5;
+// Bootstrap'in #6c757d grisi (text-muted, secondary) açık zeminde 4.45:1 kalıyor (WCAG AA 4.5).
+// #5c636a: beyazda 6.1, sayfa zemininde (#f8f9fa) 5.8, Kanban kolonunda (#e9ecef) 5.1.
+$gray-600: #5c636a;
 $border-radius: 0.5rem;
 $font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 

@@ -168,6 +168,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
       return null;
     }
     const apiError = extractApiError(error);
-    return apiError ? applyServerErrors(form, apiError) : 'İşlem tamamlanamadı. Lütfen tekrar deneyin.';
+    return apiError ? applyServerErrors(form, apiError) : 'İşlem tamamlanamadı. Lütfen tekrar dene.';
   }
 }

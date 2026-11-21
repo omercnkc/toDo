@@ -30,4 +30,28 @@ describe('DashboardService', () => {
     expect(req.request.params.get('scope')).toBe('all');
     req.flush({});
   });
+
+  it('değişiklikten sonra her kapsam bir kez fresh=true ister; başarısızsa tekrar ister', () => {
+    service.markStale();
+
+    service.summary().subscribe({ error: () => undefined });
+    let req = http.expectOne((r) => r.url === '/api/dashboard/summary');
+    expect(req.request.params.get('fresh')).toBe('true');
+    req.flush({}, { status: 503, statusText: 'Service Unavailable' });
+
+    service.summary().subscribe();
+    req = http.expectOne((r) => r.url === '/api/dashboard/summary');
+    expect(req.request.params.get('fresh')).toBe('true');
+    req.flush({});
+
+    service.summary().subscribe();
+    req = http.expectOne((r) => r.url === '/api/dashboard/summary');
+    expect(req.request.params.has('fresh')).toBeFalse();
+    req.flush({});
+
+    service.summary('all').subscribe();
+    req = http.expectOne((r) => r.url === '/api/dashboard/summary');
+    expect(req.request.params.get('fresh')).toBe('true');
+    req.flush({});
+  });
 });

@@ -58,3 +58,22 @@ body {
   background-color: #d1e7dd;
   color: #0f5132;
 }
+
+// ---------- Odak görünürlüğü (WCAG 2.4.7) ----------
+// Bootstrap düğme ve form alanlarına kendi odak halkasını verir (.btn, .form-control … daha özgül, bu kural
+// onları ezmez). Bağlantılar ve role="button" öğeler için tarayıcıdan bağımsız, belirgin ve tutarlı çerçeve.
+a:focus-visible,
+[role="button"]:focus-visible,
+summary:focus-visible {
+  outline: 2px solid $primary;
+  outline-offset: 2px;
+  border-radius: 0.125rem;
+}
+
+// Koyu zeminde (navbar) mor çerçeve görünmez
+.navbar-dark a:focus-visible,
+.navbar-dark button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: none;
+}

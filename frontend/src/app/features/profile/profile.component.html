@@ -5,10 +5,10 @@
   Profil yükleniyor…
 </div>
 
-<div *ngIf="loadFailed && !loading" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="alert">
-  <span>Profil bilgileri yüklenemedi.</span>
-  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="load()">Tekrar dene</button>
-</div>
+<app-state-panel *ngIf="loadFailed && !loading" tone="error" heading="Profil bilgileri yüklenemedi"
+  message="Bağlantını kontrol edip tekrar dene.">
+  <button type="button" class="btn btn-outline-secondary" (click)="load()">Tekrar dene</button>
+</app-state-panel>
 
 <div *ngIf="profile" class="row g-4">
   <!-- Özet -->

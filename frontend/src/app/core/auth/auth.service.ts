@@ -1,11 +1,11 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { NavigationExtras, Router } from '@angular/router';
 import { BehaviorSubject, lastValueFrom, Observable, of } from 'rxjs';
 import { catchError, distinctUntilChanged, finalize, map, shareReplay, tap } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
-import { AuthResponse, LoginRequest, RegisterRequest } from '../models/auth.model';
+import { AuthResponse, LoginNavigationState, LoginRequest, RegisterRequest } from '../models/auth.model';
 import { Role, User } from '../models/user.model';
 
 interface AuthState {
@@ -82,14 +82,20 @@ export class AuthService {
 
   /**
    * Cookie ile yeni access token alır (gövde yok; cookie aynı origin olduğu için tarayıcı ekler).
-   * Eşzamanlı çağrılar aynı isteği paylaşır. Başarısızsa oturum temizlenir ve hata iletilir.
+   * Eşzamanlı çağrılar aynı isteği paylaşır. Hata her durumda iletilir; oturum yalnızca sunucu
+   * refresh token'ı **reddederse** (401/403) temizlenir. Bağlantı kopması veya 5xx'te oturum
+   * korunur: kısa bir kesinti kullanıcıyı çıkışa zorlamasın, sonraki istek yeniden dener.
    */
   refresh(): Observable<AuthResponse> {
     if (!this.refreshInFlight) {
       this.refreshInFlight = this.http.post<AuthResponse>(`${this.authUrl}/refresh`, null).pipe(
         tap({
           next: (response) => this.setSession(response),
-          error: () => this.clearSession(),
+          error: (error: unknown) => {
+            if (isSessionRejected(error)) {
+              this.clearSession();
+            }
+          },
         }),
         finalize(() => (this.refreshInFlight = null)),
         shareReplay(1),
@@ -115,12 +121,16 @@ export class AuthService {
     );
   }
 
-  /** Oturum yenilenemedi: belleği temizle, kaldığı sayfaya dönebilsin diye returnUrl ile login'e git. */
+  /**
+   * Oturum yenilenemedi: belleği temizle, kaldığı sayfaya dönebilsin diye returnUrl ile login'e git;
+   * login sayfası "oturumun sona erdi" bilgisini gösterir.
+   */
   sessionExpired(): void {
     this.clearSession();
     const currentUrl = this.router.url;
     if (!currentUrl.startsWith('/login')) {
-      void this.router.navigate(['/login'], { queryParams: { returnUrl: currentUrl } });
+      const state: LoginNavigationState = { notice: 'sessionExpired' };
+      void this.router.navigate(['/login'], { queryParams: { returnUrl: currentUrl }, state });
     }
   }
 
@@ -138,4 +148,9 @@ export class AuthService {
   private setSession(response: AuthResponse): void {
     this.state.next({ accessToken: response.accessToken, user: response.user });
   }
+}
+
+/** Sunucu oturumu reddetti mi (refresh token geçersiz/iptal/süresi dolmuş)? Ağ ve 5xx hataları sayılmaz. */
+export function isSessionRejected(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403);
 }

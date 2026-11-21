@@ -9,7 +9,7 @@ export type TaskView = 'board' | 'list';
 @Component({
   selector: 'app-task-view-switch',
   template: `
-    <nav class="btn-group" role="group" aria-label="Görünüm">
+    <nav class="btn-group" aria-label="Görünüm">
       <a
         [routerLink]="['/projects', projectId, 'board']"
         class="btn btn-outline-secondary btn-sm"

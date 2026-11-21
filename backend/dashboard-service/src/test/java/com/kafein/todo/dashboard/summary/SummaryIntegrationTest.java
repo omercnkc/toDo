@@ -187,6 +187,24 @@ class SummaryIntegrationTest extends DashboardTestSupport {
     }
 
     @Test
+    void freshOnbellegiAtlarVeYeniOzetiOnbellegeYazar() throws Exception {
+        AuthenticatedUser user = newUser(Role.USER);
+        myProjects(user);
+        String cachedAt = summary(user).get("generatedAt").asText();
+        assertThat(calls(TASK_SERVICE, STATS)).isEqualTo(1);
+
+        Thread.sleep(5); // generatedAt farklı olsun
+        String body = perform(get("/dashboard/summary").param("fresh", "true"), user).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        String freshAt = objectMapper.readTree(body).get("generatedAt").asText();
+        assertThat(freshAt).as("önbellek okunmadı").isNotEqualTo(cachedAt);
+        assertThat(calls(TASK_SERVICE, STATS)).isEqualTo(2);
+
+        assertThat(summary(user).get("generatedAt").asText()).as("taze özet önbelleğe yazıldı").isEqualTo(freshAt);
+        assertThat(calls(TASK_SERVICE, STATS)).isEqualTo(2);
+    }
+
+    @Test
     void birTarafKapaliysaKismiDegil503() throws Exception {
         AuthenticatedUser user = newUser(Role.USER);
         myProjects(user);

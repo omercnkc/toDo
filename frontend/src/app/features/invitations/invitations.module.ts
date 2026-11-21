@@ -7,6 +7,6 @@ import { MyInvitationsComponent } from './my-invitations/my-invitations.componen
 /** /invitations (lazy): "Davetlerim" — bana gelen bekleyen davetleri kabul / red. */
 @NgModule({
   declarations: [MyInvitationsComponent],
-  imports: [SharedModule, RouterModule.forChild([{ path: '', component: MyInvitationsComponent }])],
+  imports: [SharedModule, RouterModule.forChild([{ path: '', component: MyInvitationsComponent, data: { title: 'Davetlerim' } }])],
 })
 export class InvitationsModule {}

@@ -12,18 +12,20 @@
   Davetler yükleniyor…
 </div>
 
-<div *ngIf="loadFailed && !loading" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="alert">
-  <span>Davetler yüklenemedi.</span>
+<!-- Liste ekrandayken başarısız yenileme listeyi silmez; liste yokken durum kartı -->
+<div *ngIf="loadFailed && !loading && invitations.length > 0" class="alert alert-warning d-flex flex-wrap align-items-center gap-3" role="alert">
+  <span>Davetler yenilenemedi; gösterilen liste güncel olmayabilir.</span>
   <button type="button" class="btn btn-sm btn-outline-secondary" (click)="load()">Tekrar dene</button>
 </div>
+<app-state-panel *ngIf="loadFailed && !loading && invitations.length === 0" tone="error" heading="Davetler yüklenemedi"
+  message="Bağlantını kontrol edip tekrar dene.">
+  <button type="button" class="btn btn-outline-secondary" (click)="load()">Tekrar dene</button>
+</app-state-panel>
 
-<div *ngIf="!loading && !loadFailed && invitations.length === 0" class="card shadow-sm border-0">
-  <div class="card-body p-5 text-center">
-    <h2 class="h5">Bekleyen davetin yok</h2>
-    <p class="text-muted mb-4">Biri seni bir projeye davet ettiğinde burada göreceksin.</p>
-    <a routerLink="/projects" class="btn btn-outline-primary">Projelerime git</a>
-  </div>
-</div>
+<app-state-panel *ngIf="!loading && !loadFailed && invitations.length === 0" heading="Bekleyen davetin yok"
+  message="Biri seni bir projeye davet ettiğinde burada göreceksin.">
+  <a routerLink="/projects" class="btn btn-outline-primary">Projelerime git</a>
+</app-state-panel>
 
 <ul *ngIf="invitations.length > 0" class="list-unstyled d-flex flex-column gap-3 mb-0">
   <li *ngFor="let invitation of invitations; trackBy: trackById">

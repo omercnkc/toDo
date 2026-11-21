@@ -43,7 +43,7 @@ export class RoleGuard implements CanActivate, CanLoad {
     if (!roles || roles.length === 0 || roles.some((role) => this.auth.hasRole(role))) {
       return true;
     }
-    this.toast.error('Bu sayfayı görüntüleme yetkiniz yok.');
+    this.toast.error('Bu sayfayı görüntüleme yetkin yok.');
     return this.router.createUrlTree(['/dashboard']);
   }
 }

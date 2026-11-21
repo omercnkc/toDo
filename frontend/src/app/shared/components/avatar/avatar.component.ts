@@ -28,7 +28,8 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
       .avatar-md { width: 2.5rem; height: 2.5rem; font-size: 0.95rem; }
       .avatar-lg { width: 5rem; height: 5rem; font-size: 1.75rem; }
       .avatar-default { background-color: rgba(79, 70, 229, 0.12); color: #4f46e5; }
-      .avatar-onDark { background-color: rgba(255, 255, 255, 0.2); color: #fff; }
+      /* Beyaz %20 zeminde beyaz yazı 4.2:1 kalıyordu; koyulaştırılmış zemin ≥ 8:1 */
+      .avatar-onDark { background-color: rgba(0, 0, 0, 0.25); color: #fff; }
     `,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

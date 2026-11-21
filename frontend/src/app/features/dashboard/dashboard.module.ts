@@ -8,6 +8,6 @@ import { DashboardComponent } from './dashboard.component';
 /** /dashboard (lazy). Chart.js yalnızca bu pakette: diğer sayfaları ağırlaştırmaz. */
 @NgModule({
   declarations: [DashboardComponent],
-  imports: [SharedModule, NgChartsModule, RouterModule.forChild([{ path: '', component: DashboardComponent }])],
+  imports: [SharedModule, NgChartsModule, RouterModule.forChild([{ path: '', component: DashboardComponent, data: { title: 'Panel' } }])],
 })
 export class DashboardModule {}

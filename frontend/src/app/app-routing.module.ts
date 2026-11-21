@@ -57,7 +57,7 @@ const routes: Routes = [
     path: '',
     loadChildren: () => import('./features/auth/auth.module').then((m) => m.AuthModule),
   },
-  { path: '**', component: NotFoundComponent },
+  { path: '**', component: NotFoundComponent, data: { title: 'Sayfa bulunamadı' } },
 ];
 
 @NgModule({

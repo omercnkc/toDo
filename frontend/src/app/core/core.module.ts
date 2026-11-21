@@ -3,6 +3,7 @@ import { APP_INITIALIZER, NgModule, Optional, SkipSelf } from '@angular/core';
 
 import { AuthService } from './auth/auth.service';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
+import { ChangeTrackingInterceptor } from './interceptors/change-tracking.interceptor';
 import { ErrorInterceptor } from './interceptors/error.interceptor';
 
 export function initializeAuth(auth: AuthService): () => Promise<void> {
@@ -22,6 +23,8 @@ export function initializeAuth(auth: AuthService): () => Promise<void> {
     { provide: APP_INITIALIZER, useFactory: initializeAuth, deps: [AuthService], multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
+    // Başarılı değişikliklerde panel özetini bayat işaretler (sıra önemsiz; yalnızca yanıtı izler)
+    { provide: HTTP_INTERCEPTORS, useClass: ChangeTrackingInterceptor, multi: true },
   ],
 })
 export class CoreModule {

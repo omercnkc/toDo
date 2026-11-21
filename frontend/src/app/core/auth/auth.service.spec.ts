@@ -107,6 +107,21 @@ describe('AuthService', () => {
     expect(service.isAuthenticated).toBeFalse();
   });
 
+  it('refresh ağ hatası veya 5xx ile başarısızsa oturumu korur ve hatayı iletir', () => {
+    service.login({ email: 'a@b.com', password: 'x' }).subscribe();
+    http.expectOne('/api/auth/login').flush(RESPONSE);
+    const statuses: number[] = [];
+
+    service.refresh().subscribe({ error: (e) => statuses.push(e.status) });
+    http.expectOne('/api/auth/refresh').error(new ProgressEvent('error'));
+    service.refresh().subscribe({ error: (e) => statuses.push(e.status) });
+    http.expectOne('/api/auth/refresh').flush({}, { status: 503, statusText: 'Service Unavailable' });
+
+    expect(statuses).toEqual([0, 503]);
+    expect(service.isAuthenticated).toBeTrue();
+    expect(service.accessToken).toBe(RESPONSE.accessToken);
+  });
+
   it('initialize cookie geçersizse hata vermeden anonim kalır', async () => {
     const done = service.initialize();
     http.expectOne('/api/auth/refresh').flush({}, { status: 401, statusText: 'Unauthorized' });
@@ -147,7 +162,10 @@ describe('AuthService', () => {
 
     service.sessionExpired();
 
-    expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/projects/5' } });
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], {
+      queryParams: { returnUrl: '/projects/5' },
+      state: { notice: 'sessionExpired' },
+    });
   });
 
   it('zaten login sayfasındaysa tekrar yönlendirmez', () => {

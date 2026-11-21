@@ -9,7 +9,7 @@ import { Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 
-import { AuthService } from '../auth/auth.service';
+import { AuthService, isSessionRejected } from '../auth/auth.service';
 import { isApiUrl, isAuthUrl } from './api-url';
 
 /**
@@ -17,7 +17,8 @@ import { isApiUrl, isAuthUrl } from './api-url';
  * refresh cookie'si ile yeni token alır ve isteği **bir kez** tekrar dener (docs/08).
  *
  * - Eşzamanlı 401'ler tek refresh'i paylaşır (AuthService.refresh).
- * - Yenileme başarısızsa veya yenilenmiş token ile de 401 gelirse oturum biter → login.
+ * - Sunucu yenilemeyi reddederse (401/403) veya yenilenmiş token ile de 401 gelirse oturum biter → login.
+ *   Yenileme ağ/5xx yüzünden olmadıysa oturum korunur ve o hata çağırana iletilir.
  * - Kimlik uçlarında (login/refresh...) yenileme denenmez; aksi halde refresh'in 401'i
  *   yeni bir refresh'i tetikleyip döngüye girerdi.
  */
@@ -36,9 +37,14 @@ export class AuthInterceptor implements HttpInterceptor {
           return throwError(() => error);
         }
         return this.auth.refresh().pipe(
-          catchError(() => {
-            this.auth.sessionExpired();
-            return throwError(() => error);
+          catchError((refreshError: unknown) => {
+            // Sunucu oturumu reddetti → login. Ağ/5xx → oturum kalır, çağıran yenilemenin hatasını
+            // görür (sayfa "bağlantını kontrol et" der, ErrorInterceptor bildirimi zaten gösterdi).
+            if (isSessionRejected(refreshError)) {
+              this.auth.sessionExpired();
+              return throwError(() => error);
+            }
+            return throwError(() => refreshError);
           }),
           // Tekrar deneme next.handle ile doğrudan gider (bu interceptor'dan yeniden geçmez),
           // bu yüzden onun 401'i burada yakalanır: yeni token'la da reddedildiyse

@@ -13,10 +13,10 @@ import { ProjectListComponent } from './project-list/project-list.component';
  * çocuksuz `:id` route'u yalnızca tam `/projects/5` ile eşleştiği için `/projects/5/board` son route'a düşer.
  */
 const routes: Routes = [
-  { path: '', component: ProjectListComponent },
-  { path: 'new', component: ProjectFormComponent },
-  { path: ':id', component: ProjectDetailComponent },
-  { path: ':id/edit', component: ProjectFormComponent },
+  { path: '', component: ProjectListComponent, data: { title: 'Projeler' } },
+  { path: 'new', component: ProjectFormComponent, data: { title: 'Yeni proje' } },
+  { path: ':id', component: ProjectDetailComponent, data: { title: 'Proje' } },
+  { path: ':id/edit', component: ProjectFormComponent, data: { title: 'Projeyi düzenle' } },
   { path: ':id', loadChildren: () => import('../tasks/tasks.module').then((m) => m.TasksModule) },
 ];
 

@@ -27,13 +27,14 @@ public class SummaryController {
      * (yalnızca ADMIN). En fazla {@code dashboard.cache-ttl} kadar eski olabilir ({@code generatedAt}).
      */
     @Operation(summary = "Panel özeti",
-            description = "`scope=mine` (varsayılan) üye olunan projeler; `scope=all` tüm sistem, yalnızca ADMIN. Toplamlar arşivdeki projeleri de kapsar. Kullanıcı + kapsam başına 30 sn önbellek (`generatedAt` hesaplama anı). Kısmi yanıt yok: aşağıdaki servislerden biri kapalıysa 503.")
+            description = "`scope=mine` (varsayılan) üye olunan projeler; `scope=all` tüm sistem, yalnızca ADMIN. Toplamlar arşivdeki projeleri de kapsar. Kullanıcı + kapsam başına 30 sn önbellek (`generatedAt` hesaplama anı); `fresh=true` önbelleği atlayıp yeniden hesaplar (arayüz, kullanıcı bir şey değiştirdikten sonra ister). Kısmi yanıt yok: aşağıdaki servislerden biri kapalıysa 503.")
     @ApiResponse(responseCode = "200", description = "Özet")
     @ApiResponse(responseCode = "403", description = "STATS_SCOPE_FORBIDDEN — `scope=all` yalnızca ADMIN")
     @ApiResponse(responseCode = "503", description = "PROJECT_SERVICE_UNAVAILABLE / TASK_SERVICE_UNAVAILABLE")
     @GetMapping("/summary")
     public DashboardSummary summary(@AuthenticationPrincipal AuthenticatedUser user,
-                                    @RequestParam(required = false) String scope) {
-        return summaryService.summary(user, scope);
+                                    @RequestParam(required = false) String scope,
+                                    @RequestParam(defaultValue = "false") boolean fresh) {
+        return summaryService.summary(user, scope, fresh);
     }
 }

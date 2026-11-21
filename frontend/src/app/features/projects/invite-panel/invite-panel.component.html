@@ -17,7 +17,7 @@
   <p *ngIf="state === 'loading'" class="small text-muted mb-0">
     <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Aranıyor…
   </p>
-  <p *ngIf="state === 'error'" class="small text-danger mb-0">Arama yapılamadı. Lütfen tekrar deneyin.</p>
+  <p *ngIf="state === 'error'" class="small text-danger mb-0">Arama yapılamadı. Lütfen tekrar dene.</p>
   <p *ngIf="state === 'done' && results.length === 0" class="small text-muted mb-0">Eşleşen kullanıcı yok.</p>
 
   <ul *ngIf="state === 'done' && results.length > 0" class="list-group">

@@ -1,4 +1,4 @@
-import { HTTP_INTERCEPTORS, HttpClient } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, Subject, throwError } from 'rxjs';
@@ -119,7 +119,7 @@ describe('AuthInterceptor', () => {
   });
 
   it('yenileme başarısızsa oturumu bitirir ve orijinal 401\'i iletir', () => {
-    auth.refreshResult = throwError(() => new Error('refresh 401'));
+    auth.refreshResult = throwError(() => new HttpErrorResponse({ status: 401, url: '/api/auth/refresh' }));
     let status = 0;
     http.get('/api/projects').subscribe({ error: (e) => (status = e.status) });
 
@@ -128,6 +128,20 @@ describe('AuthInterceptor', () => {
     expect(status).toBe(401);
     expect(auth.sessionExpiredCalls).toBe(1);
     backend.expectNone('/api/projects');
+  });
+
+  it('yenileme ağ hatası/5xx ile başarısızsa oturum kalır, yenilemenin hatası iletilir', () => {
+    for (const refreshStatus of [0, 503]) {
+      auth.refreshResult = throwError(() => new HttpErrorResponse({ status: refreshStatus, url: '/api/auth/refresh' }));
+      let status = -1;
+      http.get('/api/projects').subscribe({ error: (e) => (status = e.status) });
+
+      backend.expectOne('/api/projects').flush({}, { status: 401, statusText: 'Unauthorized' });
+
+      expect(status).toBe(refreshStatus);
+      backend.expectNone('/api/projects');
+    }
+    expect(auth.sessionExpiredCalls).toBe(0);
   });
 
   it('yeni token ile de 401 gelirse döngüye girmez, oturumu bitirir', () => {

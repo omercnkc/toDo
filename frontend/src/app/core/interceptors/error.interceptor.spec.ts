@@ -35,7 +35,7 @@ describe('ErrorInterceptor', () => {
 
   it('sunucu hatasında genel bildirim gösterir ve hatayı iletir', () => {
     expect(fail('/api/projects', 500)).toBe(500);
-    expect(toast.error).toHaveBeenCalledWith('Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.');
+    expect(toast.error).toHaveBeenCalledWith('Beklenmeyen bir hata oluştu. Lütfen tekrar dene.');
   });
 
   it('ağ hatasında (status 0) bağlantı mesajı gösterir', () => {

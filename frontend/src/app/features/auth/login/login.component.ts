@@ -80,7 +80,7 @@ export class LoginComponent {
       return;
     }
     const apiError = extractApiError(error);
-    this.formError = apiError ? applyServerErrors(this.form, apiError) : 'Giriş yapılamadı. Lütfen tekrar deneyin.';
+    this.formError = apiError ? applyServerErrors(this.form, apiError) : 'Giriş yapılamadı. Lütfen tekrar dene.';
     if (apiError?.error === 'INVALID_CREDENTIALS') {
       this.control('password').reset();
     }
