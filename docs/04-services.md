@@ -2,17 +2,14 @@
 
 ## Ortak Paket Yapısı (her iş servisi)
 ```
-com.kafein.todo.<service>
-├─ config/        Security, Feign, OpenAPI konfigürasyonları
-├─ controller/    REST controller'lar
-├─ service/       İş mantığı
-├─ repository/    Spring Data JPA
-├─ entity/        JPA entity'leri
-├─ dto/           Request/Response DTO'lar
-├─ mapper/        MapStruct
-├─ client/        Feign client'lar (varsa)
-├─ exception/     Özel exception'lar + @RestControllerAdvice
-└─ spec/          JPA Specification (filtreleme)
+com.kafein.todo.<servis>
+├─ config/          Security, Feign, OpenAPI, özellik (properties) sınıfları
+├─ client/          Feign client'lar + "directory" sarmalayıcıları (hata → 503 eşlemesi)
+├─ access/          Proje bazlı yetki kontrolleri (project-, task-service)
+├─ internal/        Yalnızca servisler arası `/internal/**` uçları
+└─ <özellik>/       Özellik bazlı paketler: controller + service + repository + entity + dto/
+                    (ör. auth: authentication, token, user · project: project, member, invitation, outbox ·
+                     task: task, task/query (Specification filtreleri), stats · dashboard: summary)
 ```
 
 ## common-lib

@@ -1,6 +1,6 @@
 # Görev ve Proje Yönetim Uygulaması
 
-Mikroservis mimarisinde geliştirilecek, proje ve görev yönetimi uygulaması. Bu klasör **kod öncesi planlama** dokümanlarını içerir.
+Mikroservis mimarisinde proje ve görev yönetimi uygulaması. Bu klasör tasarım belgelerini ve kararların gerekçelerini içerir; kodla birlikte güncel tutulur (kurulum ve çalıştırma: kökteki [README](../README.md)).
 
 ## Okuma Sırası
 | # | Doküman | Konu |
@@ -21,10 +21,10 @@ Mikroservis mimarisinde geliştirilecek, proje ve görev yönetimi uygulaması. 
 - **Database-per-service**: tek MySQL container, her servise ayrı şema. Şemalar arası FK yok.
 - **Monorepo**: backend (Maven multi-module) + frontend (Angular) tek repoda.
 - **Roller**: `ADMIN` / `USER`; projelere üye eklenir, görevler üyelere atanır.
-- **Spring Boot 3.3.x** (son yama sürümü) + Spring Cloud 2023.0.x, Java 21.
+- **Spring Boot 3.5.x** + Spring Cloud 2025.0.x, Java 21 (başlangıçta 3.3.x; 7-C'de güvenlik açıkları nedeniyle yükseltildi).
 - **Refresh token httpOnly cookie'de**; access token yalnızca bellekte (bkz. 07).
 - **Proje kalıcı silmede Transactional Outbox**: görev temizliği project_db'deki `outbox_events` tablosu + zamanlanmış relay ile, broker'sız (bkz. 04, 05).
 - **"MPA" yorumu**: Angular tabanlı çok sayfalı yapı (lazy-loaded feature modülleri). Gerçek server-rendered MPA değildir; farklıysa belirtilmeli.
 
 ## Açık Noktalar
-- Angular 13 + Node 14 eski olduğundan kütüphane sürümleri uyumluluğa göre sabitlenecek (bkz. 02, 08).
+- Angular 13 + Node 14 eski bir hat: kütüphane sürümleri sabit, yaması olmayan bulgular kabul edilen risk (bkz. 02, 07). Major yükseltme sonraki sürüm adayı.

@@ -4,19 +4,18 @@
 - Planlama dokümanları (`docs/00`–`10`): tamam.
 - Memory bank çekirdek dosyaları: tamam.
 
-## Yapılacaklar (docs/10-roadmap.md fazları)
-- [x] Faz 0 – İskelet (monorepo, Maven parent, common-lib, compose+MySQL, Angular projesi) — 2026-11-12 tamamlandı (mvnw package, ng build, testler, MySQL şema/kullanıcı izolasyonu doğrulandı)
-- [x] Faz 1 – discovery-server + api-gateway — 2026-11-13 tamamlandı (3 adım: 1-A Eureka, 1-B route/CORS/filtre iskeleti, 1-C Docker; jar ve Docker'da Eureka kaydı + route/401/404/400/CORS doğrulandı)
-- [ ] Faz 2 – auth-service + frontend login/layout — devam ediyor (2-A..2-E tamam, 2-F/2-G kaldı; adım ayrıntıları docs/10-roadmap.md "Alt Görevler ve İlerleme")
-- [ ] Faz 3 – project-service + proje ekranları + davet akışı
-- [ ] Faz 4 – task-service + Kanban + outbox relay (proje kalıcı silme)
-- [ ] Faz 5 – Arama/filtre/sıralama
-- [ ] Faz 6 – dashboard-service + ekran
-- [ ] Faz 7 – Cila, testler, uçtan uca Docker
+## Fazlar (docs/10-roadmap.md)
+- [x] Faz 0 – İskelet — 2026-11-12
+- [x] Faz 1 – discovery-server + api-gateway — 2026-11-13
+- [x] Faz 2 – auth-service + login/layout — 2026-11-14
+- [x] Faz 3 – project-service + davet akışı — 2026-11-14
+- [x] Faz 4 – task-service + Kanban + outbox — 2026-11-16
+- [x] Faz 5 – Arama/filtre/sıralama — 2026-11-17
+- [x] Faz 6 – dashboard-service + panel — 2026-11-17
+- [x] Faz 7 – Docker, Swagger, güvenlik, arayüz cilası, README — 2026-11-21 (7-E kalıcı e2e paketi atlandı: kullanıcı uçtan uca testi elle yaptı)
 
 ## Bilinen sorunlar
 - Gateway kapanırken Eureka'ya hemen `DOWN` bildiriyor ama cancel isteği sunucuya ulaşmıyor; kayıt lease süresiyle (~40 sn) düşüyor. DOWN örneklere istek gitmediği için pratik etkisi yok.
-- Servis örneği yokken gateway'in 503 yanıtı Spring varsayılan formatında (ApiError değil) — Faz 7.
 - Windows'ta `docker compose build` küçük sürücü harfli dizinden (`d:\`) çalıştırılınca buildx "failed to execute bake" veriyor; `D:\` ile çalıştır.
 
 ## Karar geçmişi

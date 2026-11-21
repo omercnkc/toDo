@@ -12,7 +12,6 @@ flowchart LR
   PROJ -. Feign .-> AUTH
   DASH -. Feign .-> PROJ
   DASH -. Feign .-> TASK
-  DASH -. Feign .-> AUTH
   EUR[(discovery-server :8761)]
   GW -.-> EUR
   AUTH -.-> EUR
@@ -38,10 +37,10 @@ flowchart LR
 |---|---|---|
 | task-service | project-service | Proje var mı, kullanıcı üye mi, atanan kişi üye mi |
 | project-service | auth-service | Davet gönderirken kullanıcı var mı/aktif mi, davet listesinde ad/e-posta özeti |
-| dashboard-service | project-service, task-service, auth-service | Özet verileri toplama |
+| dashboard-service | project-service, task-service | Özet verileri toplama (proje adları project-service'ten gelir; auth-service'e gerek kalmadı) |
 
 Döngüsel bağımlılık yoktur (auth ← project ← task ← dashboard).
-Feign çağrılarında Authorization header'ı interceptor ile taşınır; timeout (2–3 sn) ve basit fallback tanımlanır.
+Feign çağrılarında Authorization header'ı interceptor ile taşınır; zaman aşımı bağlantı 2 sn / okuma 5 sn. Fallback yok: aşağı servis yanıt vermezse çağıran 503 + anlamlı hata kodu döner (`PROJECT_SERVICE_UNAVAILABLE` …), servise ulaşamayan gateway de 503 `SERVICE_UNAVAILABLE`.
 
 ## Repo Yapısı (monorepo)
 ```

@@ -16,7 +16,7 @@ import { SKIP_ERROR_TOAST } from './http-context.tokens';
 
 /**
  * Sayfaların tek tek ele almadığı genel hatalar için bildirim gösterir:
- * - 0 (ağ / sunucuya ulaşılamıyor), 5xx → genel mesaj
+ * - 0 (ağ / sunucuya ulaşılamıyor), 502/503/504 (servis geçici olarak yok), diğer 5xx → genel mesaj
  * - 403 → yetki mesajı (kimlik uçları hariç; login'in 403'ünü sayfa gösterir)
  *
  * 400/404/409 gibi hatalar formlara ve sayfalara bırakılır (alan bazlı gösterilir);
@@ -40,6 +40,9 @@ export class ErrorInterceptor implements HttpInterceptor {
   private notify(error: HttpErrorResponse, url: string): void {
     if (error.status === 0) {
       this.toast.error('Sunucuya ulaşılamıyor. Bağlantını kontrol edip tekrar dene.');
+    } else if (error.status === 502 || error.status === 503 || error.status === 504) {
+      // Gateway/servis geçici olarak yok (yeniden başlıyor, kapalı): kullanıcının yapabileceği tek şey beklemek
+      this.toast.error('Servis şu an yanıt vermiyor. Biraz sonra tekrar dene.');
     } else if (error.status >= 500) {
       this.toast.error('Beklenmeyen bir hata oluştu. Lütfen tekrar dene.');
     } else if (error.status === 403 && !isAuthUrl(url)) {

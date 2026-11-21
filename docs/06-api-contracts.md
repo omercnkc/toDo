@@ -12,6 +12,7 @@ Tüm istekler gateway üzerinden: `http://localhost:8080/api/...`. Gövde JSON. 
   "fieldErrors": [ { "field": "title", "message": "boş olamaz" } ] }
 ```
 - HTTP kodları: 200/201/204, 400 (doğrulama), 401 (kimlik yok/geçersiz), 403 (yetki yok), 404, 409 (çakışma, ör. e-posta kayıtlı).
+- Gateway'in kendi hataları da aynı biçimde (7-F): servis örneği yok / bağlantı reddedildi → 503 `SERVICE_UNAVAILABLE`, zaman aşımı → 504 `GATEWAY_TIMEOUT`, eşleşmeyen yol → 404 `NOT_FOUND`, beklenmeyen → 500 `INTERNAL_ERROR` (ayrıntı yalnızca logda); kimlik → 401 `UNAUTHORIZED`, yol hilesi → 400 `BAD_REQUEST`, hız sınırı → 429.
 
 ## OpenAPI / Swagger UI
 - **Swagger UI:** http://localhost:8080/swagger-ui.html (gateway). Üstteki listeden servis seçilir (auth, project, task, dashboard).

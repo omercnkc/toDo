@@ -38,6 +38,15 @@ describe('ErrorInterceptor', () => {
     expect(toast.error).toHaveBeenCalledWith('Beklenmeyen bir hata oluştu. Lütfen tekrar dene.');
   });
 
+  it('502/503/504\'te "servis yanıt vermiyor" bildirimi (beklenmeyen hata değil)', () => {
+    for (const status of [502, 503, 504]) {
+      expect(fail('/api/projects', status)).toBe(status);
+    }
+    expect(toast.error).toHaveBeenCalledTimes(3);
+    expect(toast.error).toHaveBeenCalledWith('Servis şu an yanıt vermiyor. Biraz sonra tekrar dene.');
+    expect(toast.error).not.toHaveBeenCalledWith('Beklenmeyen bir hata oluştu. Lütfen tekrar dene.');
+  });
+
   it('ağ hatasında (status 0) bağlantı mesajı gösterir', () => {
     http.get('/api/projects').subscribe({ error: () => undefined });
     backend.expectOne('/api/projects').error(new ProgressEvent('error'));

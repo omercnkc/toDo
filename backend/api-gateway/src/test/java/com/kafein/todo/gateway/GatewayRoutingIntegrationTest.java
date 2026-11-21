@@ -73,7 +73,14 @@ class GatewayRoutingIntegrationTest {
             client.get().uri(path)
                     .header(HttpHeaders.AUTHORIZATION, token)
                     .exchange()
-                    .expectStatus().isEqualTo(503);
+                    .expectStatus().isEqualTo(503)
+                    // Gateway'in kendi hatası da servislerle aynı ApiError biçiminde (Spring'in varsayılan gövdesi değil)
+                    .expectHeader().valueEquals("Cache-Control", "no-store")
+                    .expectBody()
+                    .jsonPath("$.status").isEqualTo(503)
+                    .jsonPath("$.error").isEqualTo("SERVICE_UNAVAILABLE")
+                    .jsonPath("$.path").isEqualTo(path)
+                    .jsonPath("$.trace").doesNotExist();
         }
     }
 
@@ -82,7 +89,10 @@ class GatewayRoutingIntegrationTest {
         client.delete().uri("/internal/tasks/by-project/1")
                 .header(HttpHeaders.AUTHORIZATION, validToken())
                 .exchange()
-                .expectStatus().isNotFound();
+                .expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.error").isEqualTo("NOT_FOUND")
+                .jsonPath("$.path").isEqualTo("/internal/tasks/by-project/1");
     }
 
     @Test

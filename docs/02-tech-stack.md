@@ -10,10 +10,10 @@
 | Spring Security | | Kimlik doğrulama / yetkilendirme |
 | JWT (jjwt 0.12.6) | | Access + refresh token |
 | Spring Cloud | 2025.0.x (Netflix Eureka, Gateway 4.3 `gateway-server-webflux`, OpenFeign) | Discovery, gateway, servisler arası çağrı |
-| Resilience4j | | Feign için timeout / circuit breaker |
+| Caffeine | | Bellek içi önbellek/sayaç: panel özeti (dashboard-service), giriş denemesi sınırı (auth-service), IP başına hız sınırı (gateway) |
 | MySQL | 8.x | Veritabanı |
 | Flyway | | Şema migration |
-| MapStruct + Lombok | | DTO eşleme, boilerplate azaltma |
+| Lombok | | Entity'lerde boilerplate azaltma (DTO'lar Java `record`, eşleme elle `from(...)` metodlarıyla) |
 | springdoc-openapi | 2.8.17 | Servisler yalnızca OpenAPI JSON üretir (`webmvc-api`); tek Swagger UI gateway'de (`webflux-ui`) |
 | JUnit 5, Mockito, Testcontainers 1.21.4 | | Test (Boot 3.5'in getirdiği sürüm; Docker 29 uyumlu) |
 | Maven | multi-module | Build |
@@ -29,7 +29,7 @@
 | Bootstrap | 5.x + SCSS (grid, utility sınıfları) |
 | @angular/cdk | 13.x – `drag-drop` (Kanban) |
 | ng2-charts + chart.js | Angular 13 uyumlu sürüm: ng2-charts 3.1.2 / chart.js 3.9.1 (sabit; yalnızca dashboard paketinde) |
-| Jest veya Karma/Jasmine | Birim test (varsayılan Karma) |
+| Karma + Jasmine | Birim test (ChromeHeadless) |
 
 > Not: Node 14 + Angular 13 kombinasyonu eskidir; bağımlılıklar `package-lock` ile sabitlenmeli ve Node 14 uyumsuz paket sürümleri kullanılmamalıdır.
 
@@ -38,5 +38,5 @@
 - **Transactional Outbox (broker'sız)**: proje kalıcı silindiğinde görev temizliği aynı transaction'da yazılan outbox kaydı + `@Scheduled` relay ile garanti edilir; RabbitMQ/Kafka gerekmez.
 - **httpOnly cookie (refresh token)**: JavaScript erişemez, XSS ile çalınamaz.
 - **Flyway**: şema değişiklikleri sürümlü ve tekrarlanabilir; JPA `ddl-auto=validate`.
-- **MapStruct**: entity ↔ DTO dönüşümünü derleme zamanında üretir.
+- **Elle DTO eşleme**: DTO'lar `record`, dönüşüm küçük `from(entity)` metodlarında; ek kod üreticisi (MapStruct) gerekmedi. Feign zaman aşımları OpenFeign ayarlarıyla (bağlantı 2 sn, okuma 5 sn); devre kesici (Resilience4j) ilk sürümde yok — aşağı servis kapalıysa 503 + anlamlı hata kodu döner.
 - **CDK drag-drop**: ek bağımlılıksız, Angular 13 ile uyumlu Kanban desteği.
