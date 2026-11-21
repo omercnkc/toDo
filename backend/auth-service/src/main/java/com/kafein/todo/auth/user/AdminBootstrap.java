@@ -45,6 +45,9 @@ public class AdminBootstrap implements ApplicationRunner {
             log.info("Varsayılan ADMIN zaten var: {}", email);
             return;
         }
+        if (admin.password().startsWith("change-me")) {
+            log.warn("ADMIN_PASSWORD .env.example'daki örnek değer: ADMIN hesabının şifresini hemen değiştirin");
+        }
         if (!new PasswordPolicyValidator().isValid(admin.password(), null)) {
             throw new IllegalStateException("ADMIN_PASSWORD şifre politikasına uymuyor (en az "
                     + PasswordPolicyValidator.MIN_LENGTH + " karakter, en fazla " + PasswordPolicyValidator.MAX_BYTES

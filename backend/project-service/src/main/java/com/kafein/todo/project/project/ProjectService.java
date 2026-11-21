@@ -117,7 +117,7 @@ public class ProjectService {
     public void archive(AuthenticatedUser user, long projectId, boolean permanent) {
         Project project = access.requireManager(projectId, user).project();
         if (permanent) {
-            projects.delete(project);
+            projects.deletePermanently(projectId);
             outbox.save(OutboxEvent.projectDeleted(projectId, clock.instant()));
             log.info("Kullanıcı {} proje {}'i kalıcı sildi; görev temizliği outbox'a yazıldı", user.id(), projectId);
             return;

@@ -3,11 +3,11 @@
 ## Konteynerler
 | Servis | İmaj | Not |
 |---|---|---|
-| mysql | `mysql:8.0` | Volume `mysql_data`, init script `docker/mysql/init.sh` |
+| mysql | `mysql:8.0` | Volume `mysql_data`, init script `docker/mysql/init.sh`; 3306 yalnızca `127.0.0.1` |
 | discovery-server | multi-stage (Maven → `eclipse-temurin:21-jre`) | |
-| api-gateway | aynı | Dışarı 8080 |
+| api-gateway | aynı | 8080 yalnızca `127.0.0.1` (Swagger UI, `ng serve` proxy) |
 | auth/project/task/dashboard | aynı | Dışarı port açılmaz (geliştirmede debug için açılabilir) |
-| frontend | multi-stage (`node:14.18.1-alpine` build → `nginxinc/nginx-unprivileged`) | Dışarı 4200 (konteyner içi 8080, root olmayan nginx). `frontend/nginx.conf`: SPA fallback, `/api/` → `api-gateway:8080` (aynı origin → httpOnly cookie sorunsuz), gzip, önbellek başlıkları |
+| frontend | multi-stage (`node:14.18.1-alpine` build → `nginxinc/nginx-unprivileged:1.29-alpine` + `apk upgrade`) | Dışarı 4200 (konteyner içi 8080, root olmayan nginx). Güvenlik başlıkları `frontend/nginx/security-headers.conf`. `frontend/nginx.conf`: SPA fallback, `/api/` → `api-gateway:8080` (aynı origin → httpOnly cookie sorunsuz), gzip, önbellek başlıkları |
 
 ## Backend Dockerfile (tüm servisler için tek dosya)
 `backend/Dockerfile` ortaktır; derlenecek servis `SERVICE` build argümanıyla seçilir (compose'da `x-backend-build` + `args.SERVICE`). Özet:

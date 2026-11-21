@@ -27,6 +27,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokens;
+    private final LoginThrottle loginThrottle;
 
     /**
      * Var olmayan e-postayla girişte de bir BCrypt karşılaştırması yapılır. Yapılmasaydı
@@ -36,11 +37,12 @@ public class AuthService {
     private final String dummyPasswordHash;
 
     public AuthService(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService,
-                       RefreshTokenService refreshTokens) {
+                       RefreshTokenService refreshTokens, LoginThrottle loginThrottle) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshTokens = refreshTokens;
+        this.loginThrottle = loginThrottle;
         this.dummyPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -62,7 +64,10 @@ public class AuthService {
 
     @Transactional
     public LoginResult login(LoginRequest request) {
-        Optional<User> found = users.findByEmail(User.normalizeEmail(request.email()));
+        String email = User.normalizeEmail(request.email());
+        // Kilitliyse BCrypt'e hiç gidilmez (kaba kuvvet denemesi CPU harcatamaz)
+        loginThrottle.checkAllowed(email);
+        Optional<User> found = users.findByEmail(email);
         String hash = found.map(User::getPasswordHash).orElse(dummyPasswordHash);
         // 72 bayttan uzun şifre kayıtta kabul edilmediği için zaten eşleşemez (BCrypt'e de verilmez)
         boolean passwordMatches = PasswordPolicyValidator.fitsBcrypt(request.password())
@@ -70,9 +75,11 @@ public class AuthService {
 
         if (found.isEmpty() || !passwordMatches) {
             // E-posta mı şifre mi yanlış, ayırt edilmez (kullanıcı keşfini zorlaştırır)
+            loginThrottle.recordFailure(email);
             throw ApiException.unauthorized("INVALID_CREDENTIALS", "E-posta veya şifre hatalı");
         }
         User user = found.get();
+        loginThrottle.reset(email);
         if (!user.isEnabled()) {
             // Şifre doğru olduğu için hesabın durumunu söylemek bilgi sızdırmaz
             throw ApiException.forbidden("ACCOUNT_DISABLED", "Hesabınız pasif durumda");

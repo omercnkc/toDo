@@ -44,6 +44,10 @@ auth:
     cookie-secure: ${COOKIE_SECURE:true}
     # Aynı anda iki yenileme (iki sekme) için tolerans; bkz. RefreshTokenService#rotate
     reuse-grace: 10s
+  login:
+    # E-posta başına hatalı giriş sınırı (LoginThrottle): pencere içinde bu kadar hatalı denemeden sonra 429
+    max-failures: ${LOGIN_MAX_FAILURES:5}
+    lock-duration: ${LOGIN_LOCK_DURATION:15m}
   password:
     # docs/07: 10–12. Her +1 hash süresini ~2 katına çıkarır (12 ≈ 200–300 ms)
     bcrypt-strength: 12

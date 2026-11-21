@@ -4,18 +4,18 @@
 | Teknoloji | Sürüm / Not | Amaç |
 |---|---|---|
 | Java | 21 (LTS) | Dil |
-| Spring Boot | 3.3.x (en son yama sürümü; parent POM'da sabitlenir) | Çatı |
+| Spring Boot | 3.5.x (3.5.16; parent POM'da sabitlenir. 7-C'de 3.3'ten yükseltildi: 3.3'ün açık desteği bitti, kritik CVE'ler) | Çatı |
 | Spring Web | | REST API |
 | Spring Data JPA / Hibernate | | ORM |
 | Spring Security | | Kimlik doğrulama / yetkilendirme |
 | JWT (jjwt 0.12.6) | | Access + refresh token |
-| Spring Cloud | 2023.0.x (Netflix Eureka, Gateway, OpenFeign) | Discovery, gateway, servisler arası çağrı |
+| Spring Cloud | 2025.0.x (Netflix Eureka, Gateway 4.3 `gateway-server-webflux`, OpenFeign) | Discovery, gateway, servisler arası çağrı |
 | Resilience4j | | Feign için timeout / circuit breaker |
 | MySQL | 8.x | Veritabanı |
 | Flyway | | Şema migration |
 | MapStruct + Lombok | | DTO eşleme, boilerplate azaltma |
-| springdoc-openapi | 2.6.0 | Servisler yalnızca OpenAPI JSON üretir (`webmvc-api`); tek Swagger UI gateway'de (`webflux-ui`) |
-| JUnit 5, Mockito, Testcontainers 1.21.4 | | Test (Testcontainers sürümü Boot'un getirdiği 1.19.8'den yükseltildi: Docker 29 uyumu) |
+| springdoc-openapi | 2.8.17 | Servisler yalnızca OpenAPI JSON üretir (`webmvc-api`); tek Swagger UI gateway'de (`webflux-ui`) |
+| JUnit 5, Mockito, Testcontainers 1.21.4 | | Test (Boot 3.5'in getirdiği sürüm; Docker 29 uyumlu) |
 | Maven | multi-module | Build |
 | Docker / Docker Compose | | Paketleme ve çalıştırma |
 

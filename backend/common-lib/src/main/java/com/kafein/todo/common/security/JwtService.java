@@ -62,6 +62,12 @@ public class JwtService {
             throw new IllegalArgumentException(
                     "JWT secret en az " + MIN_SECRET_BYTES + " bayt olmalı (JWT_SECRET ortam değişkeni)");
         }
+        if (secret.startsWith("change-me")) {
+            // .env.example'daki örnek değer: herkes bildiği için token taklit edilebilir. Yerel denemede çalışsın
+            // diye servis durdurulmaz, ama her açılışta uyarılır (docs/07).
+            System.getLogger(JwtService.class.getName()).log(System.Logger.Level.WARNING,
+                    "JWT_SECRET .env.example'daki örnek değer: üretimde mutlaka değiştirin (openssl rand -base64 48)");
+        }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenTtl = canIssue ? accessTokenTtl : null; // null: yalnızca doğrulama
         this.clock = clock;

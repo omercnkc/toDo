@@ -38,6 +38,9 @@ public class ErrorResponseWriter {
             return response.setComplete();
         }
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        // Servislerin (Spring Security) yanıtlarıyla aynı: içerik türü tahmini yok, hata yanıtı önbelleğe alınmaz
+        response.getHeaders().set("X-Content-Type-Options", "nosniff");
+        response.getHeaders().setCacheControl("no-store");
         return response.writeWith(Mono.just(response.bufferFactory().wrap(bytes)));
     }
 }

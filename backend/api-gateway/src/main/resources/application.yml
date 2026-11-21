@@ -12,79 +12,82 @@ spring:
       - optional:file:../../.env[.properties]
   cloud:
     gateway:
-      # Route'lar elle tanımlı. discovery.locator kapalı kalır: açılırsa Eureka'daki her servis
-      # (ve /internal/** uçları) /<servis-adı>/** altında otomatik dışarı açılırdı.
-      routes:
-        # StripPrefix=1: /api/auth/login → auth-service'e /auth/login olarak gider.
-        # Servis controller'ları /api öneki olmadan yazılır; Feign çağrılarıyla aynı yollar.
-        - id: auth-service
-          uri: lb://auth-service
-          predicates:
-            - Path=/api/auth/**,/api/users/**
-          filters:
-            - StripPrefix=1
-        - id: project-service
-          uri: lb://project-service
-          predicates:
-            - Path=/api/projects/**,/api/invitations/**
-          filters:
-            - StripPrefix=1
-        - id: task-service
-          uri: lb://task-service
-          predicates:
-            - Path=/api/tasks/**
-          filters:
-            - StripPrefix=1
-        - id: dashboard-service
-          uri: lb://dashboard-service
-          predicates:
-            - Path=/api/dashboard/**
-          filters:
-            - StripPrefix=1
-        # OpenAPI belgeleri: /api/docs/{servis} → servisin /v3/api-docs'u (Swagger UI bunları okur, yalnızca GET).
-        # Servis API_DOCS_ENABLED=false ile kapatılmışsa 404 döner.
-        - id: auth-service-api-docs
-          uri: lb://auth-service
-          predicates:
-            - Path=/api/docs/auth
-            - Method=GET
-          filters:
-            - SetPath=/v3/api-docs
-        - id: project-service-api-docs
-          uri: lb://project-service
-          predicates:
-            - Path=/api/docs/project
-            - Method=GET
-          filters:
-            - SetPath=/v3/api-docs
-        - id: task-service-api-docs
-          uri: lb://task-service
-          predicates:
-            - Path=/api/docs/task
-            - Method=GET
-          filters:
-            - SetPath=/v3/api-docs
-        - id: dashboard-service-api-docs
-          uri: lb://dashboard-service
-          predicates:
-            - Path=/api/docs/dashboard
-            - Method=GET
-          filters:
-            - SetPath=/v3/api-docs
-      # /internal/** için route yok → gateway 404 döner.
+      # Spring Cloud 2025.0 (Gateway 4.3): ayarlar server.webflux altında
+      server:
+        webflux:
+          # Route'lar elle tanımlı. discovery.locator kapalı kalır: açılırsa Eureka'daki her servis
+          # (ve /internal/** uçları) /<servis-adı>/** altında otomatik dışarı açılırdı.
+          routes:
+            # StripPrefix=1: /api/auth/login → auth-service'e /auth/login olarak gider.
+            # Servis controller'ları /api öneki olmadan yazılır; Feign çağrılarıyla aynı yollar.
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/auth/**,/api/users/**
+              filters:
+                - StripPrefix=1
+            - id: project-service
+              uri: lb://project-service
+              predicates:
+                - Path=/api/projects/**,/api/invitations/**
+              filters:
+                - StripPrefix=1
+            - id: task-service
+              uri: lb://task-service
+              predicates:
+                - Path=/api/tasks/**
+              filters:
+                - StripPrefix=1
+            - id: dashboard-service
+              uri: lb://dashboard-service
+              predicates:
+                - Path=/api/dashboard/**
+              filters:
+                - StripPrefix=1
+            # OpenAPI belgeleri: /api/docs/{servis} → servisin /v3/api-docs'u (Swagger UI bunları okur, yalnızca GET).
+            # Servis API_DOCS_ENABLED=false ile kapatılmışsa 404 döner.
+            - id: auth-service-api-docs
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/docs/auth
+                - Method=GET
+              filters:
+                - SetPath=/v3/api-docs
+            - id: project-service-api-docs
+              uri: lb://project-service
+              predicates:
+                - Path=/api/docs/project
+                - Method=GET
+              filters:
+                - SetPath=/v3/api-docs
+            - id: task-service-api-docs
+              uri: lb://task-service
+              predicates:
+                - Path=/api/docs/task
+                - Method=GET
+              filters:
+                - SetPath=/v3/api-docs
+            - id: dashboard-service-api-docs
+              uri: lb://dashboard-service
+              predicates:
+                - Path=/api/docs/dashboard
+                - Method=GET
+              filters:
+                - SetPath=/v3/api-docs
+          # /internal/** için route yok → gateway 404 döner.
 
-      # CORS yalnızca yedek: frontend normalde aynı origin'den (/api, proxy/nginx) gelir.
-      globalcors:
-        cors-configurations:
-          '[/api/**]':
-            allowed-origins: ${FRONTEND_ORIGIN:http://localhost:4200}
-            allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
-            allowed-headers: Authorization,Content-Type
-            allow-credentials: true
-            max-age: 3600
-      default-filters:
-        # Servis de CORS header'ı eklerse tarayıcı çift header'ı reddeder; tekini bırak
-        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+          # CORS yalnızca yedek: frontend normalde aynı origin'den (/api, proxy/nginx) gelir.
+          globalcors:
+            cors-configurations:
+              '[/api/**]':
+                allowed-origins: ${FRONTEND_ORIGIN:http://localhost:4200}
+                allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+                allowed-headers: Authorization,Content-Type
+                allow-credentials: true
+                max-age: 3600
+          default-filters:
+            # Servis de CORS header'ı eklerse tarayıcı çift header'ı reddeder; tekini bırak
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
 
 eureka:
   client:
@@ -119,6 +122,14 @@ gateway:
     cookie-auth-paths:
       - /api/auth/refresh
       - /api/auth/logout
+
+  # Kimlik uçlarına IP başına istek sınırı (AuthRateLimitFilter): pencerede yol başına en fazla bu kadar POST → 429
+  rate-limit:
+    paths:
+      - /api/auth/login
+      - /api/auth/register
+    max-requests: ${AUTH_RATE_LIMIT_MAX:20}
+    window: ${AUTH_RATE_LIMIT_WINDOW:1m}
 
 # Tek Swagger UI: http://localhost:8080/swagger-ui.html (servis üstteki listeden seçilir).
 # "Try it out" istekleri belgedeki sunucu adresiyle (/api) yine bu gateway'den geçer.

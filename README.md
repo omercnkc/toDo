@@ -2,7 +2,7 @@
 
 Ekiplerin projelerini ve görevlerini tek yerde takip ettiği, **Kanban** panosu ve **dashboard** ile işin hangi aşamada olduğunu bir bakışta gösteren, **mikroservis mimarisinde** bir web uygulaması.
 
-`Java 21` · `Spring Boot 3.3` · `Spring Cloud (Eureka, Gateway, OpenFeign)` · `MySQL 8` · `Angular 13` · `Docker`
+`Java 21` · `Spring Boot 3.5` · `Spring Cloud (Eureka, Gateway, OpenFeign)` · `MySQL 8` · `Angular 13` · `Docker`
 
 ---
 
@@ -47,7 +47,7 @@ Ayrıntılar: [docs/03-architecture.md](docs/03-architecture.md), [docs/07-secur
 
 | Katman | Teknolojiler |
 |---|---|
-| Backend | Java 21, Spring Boot 3.3.13, Spring Cloud 2023.0.6, Spring Data JPA, Spring Security, jjwt, Resilience4j, Flyway, MapStruct, Lombok, springdoc-openapi |
+| Backend | Java 21, Spring Boot 3.5.16, Spring Cloud 2025.0.3, Spring Data JPA, Spring Security, jjwt, Resilience4j, Flyway, MapStruct, Lombok, springdoc-openapi |
 | Veritabanı | MySQL 8 |
 | Frontend | Angular 13, RxJS 7, Bootstrap 5 + SCSS, @angular/cdk (drag-drop), ng2-charts + Chart.js |
 | Test | JUnit 5, Mockito, Testcontainers, Karma/Jasmine |

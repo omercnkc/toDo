@@ -19,6 +19,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -47,7 +48,8 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AuthService(users, passwordEncoder, jwtService, refreshTokens);
+        service = new AuthService(users, passwordEncoder, jwtService, refreshTokens,
+                new LoginThrottle(5, Duration.ofMinutes(15), Clock.systemUTC()));
     }
 
     // ---------- register ----------

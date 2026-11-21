@@ -164,6 +164,54 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    void besHataliDenemedenSonraDogruSifreDe429RetryAfterIle() throws Exception {
+        String email = uniqueEmail();
+        mvc.perform(register(email, PASSWORD, "Deniz")).andExpect(status().isCreated());
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(login(email, "Yanlis.Sifre1")).andExpect(status().isUnauthorized());
+        }
+
+        mvc.perform(login(email, PASSWORD))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.error").value("TOO_MANY_LOGIN_ATTEMPTS"))
+                .andExpect(jsonPath("$.message").value("Çok fazla hatalı giriş denemesi. 15 dakika sonra tekrar deneyin."))
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "900"))
+                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+        // Büyük/küçük harf farkı sınırı aşmaz (e-posta normalize edilir)
+        mvc.perform(login(email.toUpperCase(), PASSWORD)).andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void kayitliOlmayanEpostadaAyniSinir() throws Exception {
+        // Yanıtlar kayıtlı kullanıcıyla aynı: sınırdan e-postanın kayıtlı olup olmadığı anlaşılmaz
+        String email = uniqueEmail();
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(login(email, PASSWORD)).andExpect(status().isUnauthorized());
+        }
+        mvc.perform(login(email, PASSWORD))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.error").value("TOO_MANY_LOGIN_ATTEMPTS"));
+    }
+
+    @Test
+    void basariliGirisSayaciSifirlarVeSinirEpostayaOzel() throws Exception {
+        String email = uniqueEmail();
+        String other = uniqueEmail();
+        mvc.perform(register(email, PASSWORD, "Ege")).andExpect(status().isCreated());
+        mvc.perform(register(other, PASSWORD, "Ela")).andExpect(status().isCreated());
+        for (int i = 0; i < 4; i++) {
+            mvc.perform(login(email, "Yanlis.Sifre1")).andExpect(status().isUnauthorized());
+        }
+        mvc.perform(login(email, PASSWORD)).andExpect(status().isOk());
+        for (int i = 0; i < 4; i++) {
+            mvc.perform(login(email, "Yanlis.Sifre1")).andExpect(status().isUnauthorized());
+        }
+        // Sıfırlandığı için 4 + 4 hata kilitlemez; başka e-posta etkilenmez
+        mvc.perform(login(email, PASSWORD)).andExpect(status().isOk());
+        mvc.perform(login(other, PASSWORD)).andExpect(status().isOk());
+    }
+
+    @Test
     void bozukJson400() throws Exception {
         mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON).content("{bozuk"))
                 .andExpect(status().isBadRequest())

@@ -28,6 +28,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <!-- Hatalı giriş sayacı (LoginThrottle); sürüm Boot'tan -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
         <!-- /v3/api-docs (JSON); arayüz gateway'deki Swagger UI -->
         <dependency>
             <groupId>org.springdoc</groupId>

@@ -58,6 +58,7 @@ public class AuthController {
     @ApiResponse(responseCode = "200", description = "Giriş başarılı; `Set-Cookie: refresh_token`")
     @ApiResponse(responseCode = "401", description = "INVALID_CREDENTIALS — e-posta veya şifre hatalı (ikisi ayırt edilmez)")
     @ApiResponse(responseCode = "403", description = "ACCOUNT_DISABLED — şifre doğru ama hesap pasif")
+    @ApiResponse(responseCode = "429", description = "TOO_MANY_LOGIN_ATTEMPTS — bu e-postayla 15 dk içinde 5 hatalı deneme; `Retry-After` saniye. TOO_MANY_REQUESTS — aynı IP'den çok fazla istek (gateway)")
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return withRefreshCookie(authService.login(request));
@@ -100,6 +101,15 @@ public class AuthController {
                                                               HttpServletRequest request) {
         return ResponseEntity.status(ex.getStatus())
                 .header(HttpHeaders.SET_COOKIE, cookies.clear().toString())
+                .body(ApiError.of(ex.getStatus().value(), ex.getError(), ex.getMessage(), request.getRequestURI()));
+    }
+
+    /** 429 + {@code Retry-After} (saniye): istemci ne zaman tekrar deneyebileceğini bilir. */
+    @ExceptionHandler(TooManyLoginAttemptsException.class)
+    public ResponseEntity<ApiError> handleTooManyLoginAttempts(TooManyLoginAttemptsException ex,
+                                                               HttpServletRequest request) {
+        return ResponseEntity.status(ex.getStatus())
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(ex.getRetryAfterSeconds()))
                 .body(ApiError.of(ex.getStatus().value(), ex.getError(), ex.getMessage(), request.getRequestURI()));
     }
 

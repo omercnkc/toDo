@@ -39,7 +39,10 @@ sequenceDiagram
 - ADMIN kendi rolünü değiştiremez ve kendini pasifleştiremez (tek ADMIN kendini kilitlemesin). Rol değişikliği bir sonraki yenilemede yeni access token'a yansır.
 - Kullanıcı araması: USER için en az 3 karakter ve yalnızca özet alanlar; LIKE joker karakterleri (`% _`) kaçışlanır, `%%%` ile tüm liste çekilemez. ADMIN detay uçları USER'a kapalı; servisler arası uçlar `/internal/**` altında ve dışarıya kapalı.
 - Servislerde hata gövdeleri common-lib `GlobalExceptionHandler` / `ApiErrorAuthenticationEntryPoint` / `ApiErrorAccessDeniedHandler` ile `ApiError` formatındadır; beklenmeyen hatalarda iç detay (SQL, stack trace) dönmez.
-- Giriş denemesi: basit rate limit (gateway veya auth-service); isteğe bağlı kilitleme.
+- **Giriş denemesi sınırı (7-C):** iki katman.
+  - auth-service `LoginThrottle`: e-posta başına 15 dk içinde 5 hatalı denemeden sonra o e-postayla giriş, pencerenin sonuna kadar `429 TOO_MANY_LOGIN_ATTEMPTS` + `Retry-After` (doğru şifre de). Kontrol BCrypt'ten önce; kayıtlı olmayan e-postaya da aynı kural (yanıttan kayıt durumu anlaşılmaz); başarılı giriş sayacı sıfırlar. Bedeli: saldırgan bir kullanıcıyı en fazla 15 dk dışarıda bırakabilir. `LOGIN_MAX_FAILURES`, `LOGIN_LOCK_DURATION`.
+  - Gateway `AuthRateLimitFilter`: `/api/auth/login` ve `/api/auth/register` POST'larına IP + yol başına 1 dk'da 20 istek → `429 TOO_MANY_REQUESTS` + `Retry-After`. IP, nginx'in yazdığı `X-Real-IP` (nginx istemcinin gönderdiğini ezer); gateway portu yalnızca `127.0.0.1`'e açık olduğu için dışarıdan sahte `X-Real-IP` ile atlatılamaz. `AUTH_RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_WINDOW`.
+  - Sayaçlar servis belleğinde (tek örnek); yatay ölçeklemede Redis gibi paylaşılan bir depoya taşınmalı.
 
 ## Roller ve Yetki Matrisi
 | İşlem | USER (üye) | USER (proje OWNER) | ADMIN |
@@ -69,4 +72,28 @@ Uygulama: `@PreAuthorize` ile rol kontrolü; proje bazlı yetki (üyelik/OWNER) 
 - CORS: yalnızca frontend origin'i (gateway'de).
 - SQL injection: JPA parametreli sorgular, Specification.
 - Gizli bilgiler (JWT secret, DB şifreleri, admin şifresi) `.env` / ortam değişkeni; repoya yazılmaz (`.env.example` verilir).
-- Bağımlılık taraması (OWASP dependency-check / `npm audit`) faz 7.
+- Bağımlılık taraması: aşağıda "Güvenlik Gözden Geçirme (7-C)".
+
+## Güvenlik Gözden Geçirme (7-C, 2026-11-20)
+
+### Bağımlılık taraması
+**Backend (Trivy 0.58.1, Docker imajları):**
+- İlk tarama (Boot 3.3.13): Spring Framework 6.1, Spring Security 6.3, Spring Cloud Gateway 4.1, Tomcat 10.1.42, Netty 4.1.122, Jackson 2.17, BouncyCastle 1.78'de kritik/yüksek CVE'ler; Boot 3.3'ün açık desteği bitmiş.
+- **Karar:** Spring Boot **3.5.16** + Spring Cloud **2025.0.3** + springdoc 2.8.17. Gateway starter'ı `spring-cloud-starter-gateway-server-webflux`, ayarlar `spring.cloud.gateway.server.webflux.*` altına taşındı. Hibernate 6.6 kalıcı proje silmede `TransientObjectException` verdiği için silme toplu `DELETE` sorgusuna çevrildi (`ProjectRepository.deletePermanently`).
+- Boot 3.5.16'nın getirdiği sürümlerde kalan bulgular aynı hattın yama sürümleriyle kapatıldı (parent POM, gerekçesiyle): Jackson 2.21.8, Netty 4.1.141, Tomcat 10.1.62, httpcore5 5.4.4, Freemarker 2.3.35 (Eureka paneli), BouncyCastle 1.87, Guava 33.7.2. Boot bunları kendisi getirdiğinde override'lar silinmeli.
+- **Kabul edilen risk:** spring-webmvc / spring-webflux 6.2.19'daki iki kritik CVE'nin düzeltmesi tarama tarihinde yalnızca Spring Framework 7 (Boot 4) hattında. Boot 4 geçişi "Sonraki Sürüm Adayları"nda. İşletim sistemi katmanı (`eclipse-temurin:21-jre`, Ubuntu 26.04): yalnızca orta/düşük.
+- **MySQL:** `mysql:8.0` imajında işletim sistemi paketleri ve araçlarda (mysqlsh Python paketleri, gosu) yüksek bulgular; MySQL 8.0'ın desteği bitti. Veritabanı yalnızca iç ağda ve `127.0.0.1`'de; 8.4 LTS'e geçiş (yerinde yükseltme) sonraki sürüm adayı.
+
+**Frontend (`npm audit`, npm 6 ile production/development ayrımı):**
+- Tarayıcıya giden kod (`--production`): 23 bulgu, **hepsi Angular 13'ün kendisinde** (`@angular/core|common|compiler|router`), 13 hattına yama yok; çözüm major yükseltme (19+), Angular 13 + Node 14 proje kısıtı (docs/02). Uygulanabilirlik incelendi: i18n, SSR / hydration / `HttpTransferCache`, `HttpClientXsrfModule`, `innerHTML`, `bypassSecurityTrust*`, kullanıcı verisinin SVG/MathML/URL özniteliklerine bağlanması **kullanılmıyor**; tarih/sayı pipe'larında format sabit. Ek katman: sıkı CSP (aşağıda). **Kabul edilen risk.**
+- Geliştirme araçları (~140; `@angular-devkit/build-angular`, `@angular/cli` altında `tar`, `piscina`, `webpack-dev-server` vb.): tarayıcıya gitmez, yalnızca derleme makinesinde çalışır. Zorlamasız `npm audit fix` uygulandı (`@babel/core`, `ajv`, `postcss`, `semver` aralık içi yükseltme; 162 → 149); build ve 249 birim testi geçti. Kalanlar Angular CLI major yükseltmesi ister.
+- **nginx imajı:** `1.27-alpine` → `1.29-alpine` + derlemede `apk upgrade` (Trivy: yüksek/kritik 57 → 0).
+
+### Uygulanan önlemler
+- **Güvenlik başlıkları** (nginx, `frontend/nginx/security-headers.conf`): `Content-Security-Policy` (`default-src 'self'`, `script-src 'self'` — satır içi script yok, `style-src 'self' 'unsafe-inline'` Angular bileşen stilleri için, `img-src 'self' data:`, `object-src 'none'`, `frame-ancestors 'none'`, `base-uri`/`form-action 'self'`), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`. CSP için `angular.json` production'da `inlineCritical: false` (kritik CSS yükleyicisinin `onload="this.media='all'"` satır içi handler'ı CSP'de engellenip sayfayı stilsiz bırakırdı). HSTS yalnızca HTTPS arkasında (TLS sonlandıran proxy). API yanıtlarında Spring Security başlıkları (`nosniff`, `X-Frame-Options`, `Cache-Control: no-store`); gateway'in kendi ürettiği hata yanıtlarına da `nosniff` + `no-store` eklendi.
+- **Portlar:** dışarıya yalnızca frontend (4200). Gateway (8080, Swagger UI) ve MySQL (3306) `127.0.0.1`'e bağlandı; Eureka paneli zaten öyleydi. İş servisleri port yayınlamaz.
+- **Konteyner kullanıcıları:** backend imajları `app` (uid 999), frontend `nginx-unprivileged` (uid 101), MySQL sunucusu `mysql` (uid 999; giriş betiği gosu ile düşürür). Hiçbiri root olarak çalışmaz.
+- **Actuator:** yalnızca `health` (detaysız) ve `info` açık; `env`, `beans`, `gateway/routes` vb. 404.
+- **Hata yanıtları:** bozuk JSON, tür uyumsuz parametre, olmayan kayıt, beklenmeyen hata → `ApiError`, stack trace / SQL / sınıf adı yok (Docker'da denendi). Gateway'in route dışı 404'ü Spring'in varsayılan JSON'u (iç detay yok).
+- **JWT anahtarı:** en az 32 bayt (aksi halde servis açılmaz, mevcut). `.env.example`'daki örnek değer (`change-me…`) kullanılırsa her açılışta uyarı; ADMIN şifresi örnek değerse de uyarı. Yerel denemede çalışsın diye servis durdurulmaz.
+- **API belgeleri** (7-B) token'sız okunabilir (yalnızca uç listesi, veri yok); gateway artık yalnızca `127.0.0.1`'de, üretimde `API_DOCS_ENABLED=false`.

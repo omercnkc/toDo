@@ -1,7 +1,7 @@
 # Tech Context
 
 ## Backend
-Java 21, Spring Boot 3.3.x (kesin; Spring Cloud 2023.0.x), Spring Data JPA/Hibernate, Spring Security, JWT (jjwt), Spring Cloud (Eureka, Gateway, OpenFeign), Resilience4j, MySQL 8, Flyway, MapStruct, Lombok, springdoc-openapi, JUnit 5/Mockito/Testcontainers, Maven multi-module, Docker.
+Java 21, Spring Boot 3.5.x (7-C'de 3.3'ten yükseltildi; Spring Cloud 2025.0.x), Spring Data JPA/Hibernate, Spring Security, JWT (jjwt), Spring Cloud (Eureka, Gateway, OpenFeign), Resilience4j, MySQL 8, Flyway, MapStruct, Lombok, springdoc-openapi, JUnit 5/Mockito/Testcontainers, Maven multi-module, Docker.
 
 ## Frontend
 Angular 13, Node 14.18.1, npm 6.14.15, TypeScript ~4.6, RxJS 7, Bootstrap 5 + SCSS, @angular/cdk (drag-drop), ng2-charts 3.x + chart.js 3.x.

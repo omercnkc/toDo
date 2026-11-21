@@ -20,7 +20,7 @@ services:
       TASK_DB_PASSWORD: ${TASK_DB_PASSWORD:?.env içinde TASK_DB_PASSWORD gerekli}
       TZ: Europe/Istanbul
     ports:
-      - "${MYSQL_PORT:-3306}:3306"   # yerel geliştirmede servisler IDE'den bağlanır
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"   # yalnızca bu makine (IDE'den çalışan servisler); dışarı açılmaz
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
@@ -60,11 +60,14 @@ services:
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:4200}
       # auth-service ile aynı anahtar (gateway token'ları doğrular)
       JWT_SECRET: ${JWT_SECRET:?.env içinde JWT_SECRET gerekli}
+      # Giriş/kayıt için IP başına istek sınırı (AuthRateLimitFilter)
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-20}
+      AUTH_RATE_LIMIT_WINDOW: ${AUTH_RATE_LIMIT_WINDOW:-1m}
       # OpenAPI belgeleri + Swagger UI (http://localhost:8080/swagger-ui.html); false ile kapanır
       API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       TZ: Europe/Istanbul
     ports:
-      - "8080:8080"   # dış dünyaya açılan tek backend portu
+      - "127.0.0.1:8080:8080"   # Swagger UI + ng serve proxy; yalnızca bu makine (tarayıcı trafiği frontend 4200 üzerinden)
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -89,6 +92,9 @@ services:
       # İlk açılışta bu e-postada kullanıcı yoksa ADMIN oluşturulur (boşsa atlanır)
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # E-posta başına hatalı giriş sınırı (LoginThrottle)
+      LOGIN_MAX_FAILURES: ${LOGIN_MAX_FAILURES:-5}
+      LOGIN_LOCK_DURATION: ${LOGIN_LOCK_DURATION:-15m}
       EUREKA_URL: http://discovery-server:8761/eureka
       EUREKA_INSTANCE_HOSTNAME: auth-service
       API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}

@@ -19,7 +19,12 @@ RUN npx ng build --configuration production
 
 # ---- runtime ----
 # Root olmayan nginx (8080'i dinler; 80 gibi ayrıcalıklı port açamaz)
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.29-alpine
+# Etiket yayımlandıktan sonra çıkan Alpine güvenlik yamaları (7-C: Trivy'de 1.29-alpine 57 yüksek/kritik → 0)
+USER root
+RUN apk upgrade --no-cache
+USER 101
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY frontend/nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /app/dist/todo-frontend /usr/share/nginx/html
 EXPOSE 8080
